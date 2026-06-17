@@ -15,9 +15,14 @@ CodexGlance is a tiny macOS menu bar app for people who just want to know one th
 - `5h` is the current 5-hour Codex usage window.
 - `wk` is the optional weekly Codex usage window.
 - Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
-- The mini gauge uses red, orange, and green zones; the needle points to the remaining percentage.
-- The cool-toned line under `5h` counts down to the next reset.
 - Click the menu bar item to see the exact reset countdown for each usage window.
+
+## Visual Design
+
+CodexGlance uses two small visual cues:
+
+- **Usage gauge:** the mini gauge shows remaining usage. Left is low remaining and red, middle is caution and orange, right is healthy and green. The needle points to the current remaining percentage.
+- **Reset line:** the cool-toned line under `5h` shows time left before the current window resets. A longer line means more time left; a shorter, brighter blue line means the next reset is closer.
 
 It is intentionally narrow:
 

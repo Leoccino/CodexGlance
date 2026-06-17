@@ -405,12 +405,14 @@ private enum StatusTitleImageRenderer {
         }
 
         let clampedFraction = min(1, max(0, CGFloat(fraction)))
-        let lineHeight: CGFloat = rect.height <= 10 ? 1.1 : 2
-        let y = rect.height <= 10 ? rect.minY + 0.4 : rect.minY + 1
+        let isCompact = rect.height <= 10
+        let lineHeight: CGFloat = isCompact ? 1.25 : 2.4
+        let underlineWidth = width * (isCompact ? 1.18 : 1.25)
+        let y = isCompact ? rect.minY + 0.35 : rect.minY + 0.8
         let trackRect = NSRect(
             x: floor(x),
             y: y,
-            width: max(2, floor(width)),
+            width: max(2, floor(underlineWidth)),
             height: lineHeight
         )
 

@@ -6,14 +6,14 @@ APP_DIR="${ROOT_DIR}/.build/CodexGlance.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
-VERSION="${CODEXGLANCE_VERSION:-0.1.1}"
+VERSION="${CODEXGLANCE_VERSION:-0.1.3}"
 
 "${ROOT_DIR}/Scripts/build.sh" >/dev/null
 
 rm -rf "${APP_DIR}"
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 cp "${ROOT_DIR}/.build/manual/CodexGlance" "${MACOS_DIR}/CodexGlance"
-cp "${ROOT_DIR}/Assets/CodexGlanceIcon.png" "${RESOURCES_DIR}/CodexGlanceIcon.png"
+cp "${ROOT_DIR}/Assets/CodexGlanceIcon.icns" "${RESOURCES_DIR}/CodexGlanceIcon.icns"
 
 cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -29,7 +29,7 @@ cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key>
   <string>CodexGlance</string>
   <key>CFBundleIconFile</key>
-  <string>CodexGlanceIcon.png</string>
+  <string>CodexGlanceIcon</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

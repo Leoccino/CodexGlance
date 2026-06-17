@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE_DIR="${ROOT_DIR}/.build/release"
-CODEXGLANCE_VERSION="${CODEXGLANCE_VERSION:-0.1.1}"
+CODEXGLANCE_VERSION="${CODEXGLANCE_VERSION:-0.1.3}"
 export CODEXGLANCE_VERSION
 APP_DIR="$("${ROOT_DIR}/Scripts/package-app.sh")"
 ZIP_PATH="${RELEASE_DIR}/CodexGlance.app.zip"

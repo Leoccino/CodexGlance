@@ -56,7 +56,9 @@ Weekly usage is hidden by default. Click the menu bar item and enable `Show Week
 
 ## Website
 
-The product site lives in `docs/` and is ready for GitHub Pages.
+The product site lives in `docs/` and is published with GitHub Pages:
+
+https://leoccino.github.io/CodexGlance/
 
 ## Build From Source
 

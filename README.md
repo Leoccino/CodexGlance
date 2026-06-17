@@ -33,6 +33,13 @@ If SwiftPM cannot find the active macOS SDK, use the direct build script:
 .build/manual/CodexGlance
 ```
 
+Package and launch as a local menu bar app:
+
+```sh
+./Scripts/package-app.sh
+open .build/CodexGlance.app
+```
+
 One-shot terminal check with the direct build:
 
 ```sh
@@ -54,4 +61,5 @@ Set `CODEX_BIN=/path/to/codex` if your `codex` executable is not on the app's PA
 swift test
 swift build
 ./Scripts/build.sh
+./Scripts/package-app.sh
 ```

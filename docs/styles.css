@@ -332,6 +332,70 @@ h2 {
   fill: var(--orange);
 }
 
+.color-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.color-specs div {
+  min-width: 0;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  display: block;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.12);
+}
+
+.swatch-red {
+  background: rgba(239, 68, 68, 0.46);
+}
+
+.swatch-orange {
+  background: rgba(249, 115, 22, 0.5);
+}
+
+.swatch-green {
+  background: rgba(34, 197, 94, 0.52);
+}
+
+.swatch-track {
+  background: rgba(17, 24, 39, 0.18);
+}
+
+.swatch-cyan {
+  background: rgba(103, 232, 249, 0.56);
+}
+
+.swatch-ink {
+  background: #111827;
+}
+
+.color-specs strong {
+  display: block;
+  font-size: 13px;
+}
+
+.color-specs code {
+  display: block;
+  margin-top: 6px;
+  padding: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  background: transparent;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .design-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -498,6 +562,7 @@ code {
   .split-section,
   .install-section,
   .feature-list,
+  .color-specs,
   .design-facts {
     grid-template-columns: 1fr;
   }

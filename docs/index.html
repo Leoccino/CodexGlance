@@ -21,41 +21,22 @@
       <nav>
         <a href="#design">Design</a>
         <a href="#install">Install</a>
-        <a href="#privacy">Privacy</a>
         <a class="nav-cta" href="https://github.com/Leoccino/CodexGlance/releases">Download</a>
       </nav>
     </header>
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-visual" aria-hidden="true">
-          <div class="menu-shell">
-            <div class="menu-dot red"></div>
-            <div class="menu-dot yellow"></div>
-            <div class="menu-dot green"></div>
-            <span class="menu-word">Finder</span>
-            <span class="menu-word">File</span>
-            <span class="menu-word">Edit</span>
-            <span class="menu-spacer"></span>
-            <div class="status-pill">
-              <span class="window-label">
-                <span>5h</span>
-                <span class="reset-line"><span></span></span>
-              </span>
-              <svg class="mini-gauge" viewBox="0 0 48 48">
-                <path d="M10 33C6 22 11 12 21 8"></path>
-                <path d="M24 7C34 7 42 15 43 25"></path>
-                <path d="M42 29C40 38 32 43 23 42"></path>
-                <line x1="24" y1="28" x2="37" y2="17"></line>
-                <circle cx="24" cy="28" r="3.5"></circle>
-              </svg>
-              <span class="percent">88%</span>
+        <div class="hero-visual">
+          <figure class="capture-frame">
+            <figcaption>Actual macOS menu bar capture</figcaption>
+            <div class="capture-strip">
+              <img src="assets/codexglance-menubar.png" alt="CodexGlance menu bar item showing 5h, a gauge, and 37 percent remaining">
             </div>
-          </div>
+          </figure>
         </div>
 
         <div class="hero-copy">
-          <img class="hero-logo" src="assets/codexglance-logo.png" alt="CodexGlance logo">
           <p class="eyebrow">macOS menu bar for Codex users</p>
           <h1 id="hero-title">CodexGlance</h1>
           <p class="slogan">Codex usage, at a glance.</p>
@@ -86,13 +67,43 @@
 
       <section class="section" id="design">
         <div class="section-copy">
-          <p class="eyebrow">Visual language</p>
-          <h2>Two small signals, one clear answer.</h2>
+          <p class="eyebrow">Actual rendering</p>
+          <h2>Actual menu bar drawing, enlarged.</h2>
           <p>
-            The default view stays compact. The gauge shows remaining usage. The line under the window label shows how close the next reset is.
+            The enlarged view below uses the same gauge model as the app: 210 degree start, 240 degree sweep, and a needle mapped to the remaining percentage.
           </p>
         </div>
-        <img class="explainer" src="assets/visual-design.svg" alt="Diagram explaining the usage gauge and reset countdown line">
+        <div class="status-breakdown" aria-label="Expanded CodexGlance menu bar rendering">
+          <div class="large-status">
+            <span class="large-window">
+              <span>5h</span>
+              <span class="large-reset-line"><span></span></span>
+            </span>
+            <svg class="large-gauge" viewBox="0 0 120 120" role="img" aria-label="Gauge with needle at 37 percent remaining">
+              <path class="gauge-track" d="M 25.36 90 A 40 40 0 1 1 94.64 90"></path>
+              <path class="zone-red" d="M 25.36 90 A 40 40 0 0 1 30.27 43.23"></path>
+              <path class="zone-orange" d="M 30.27 43.23 A 40 40 0 0 1 76.27 33.46"></path>
+              <path class="zone-green" d="M 76.27 33.46 A 40 40 0 0 1 94.64 90"></path>
+              <line class="needle" x1="60" y1="70" x2="45.91" y2="46.73"></line>
+              <circle class="needle-dot" cx="60" cy="70" r="8"></circle>
+            </svg>
+            <span class="large-percent">37%</span>
+          </div>
+          <div class="design-facts">
+            <div>
+              <strong>Usage</strong>
+              <span>remaining percent, not consumed percent</span>
+            </div>
+            <div>
+              <strong>Gauge</strong>
+              <span>red 0-30, orange 30-60, green 60-100</span>
+            </div>
+            <div>
+              <strong>Reset</strong>
+              <span>the underline shrinks as the next window gets closer</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="section split">
@@ -143,16 +154,6 @@
         </ol>
       </section>
 
-      <section class="section privacy" id="privacy">
-        <div class="section-copy">
-          <p class="eyebrow">Privacy</p>
-          <h2>Local by design.</h2>
-          <p>
-            CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to a third-party service.
-          </p>
-        </div>
-        <a class="button primary" href="https://github.com/Leoccino/CodexGlance/releases">Download CodexGlance</a>
-      </section>
     </main>
 
     <footer class="site-footer">

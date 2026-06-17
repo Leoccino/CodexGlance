@@ -3,10 +3,10 @@ import Foundation
 public enum CodexUsageDisplayFormatter {
     public static func menuTitle(for snapshot: CodexUsageSnapshot?) -> String {
         guard let snapshot else {
-            return "5h --%  wk --%"
+            return "5h --%\nwk --%"
         }
 
-        return "5h \(bar(snapshot.current)) \(percentage(snapshot.current))%  wk \(bar(snapshot.weekly)) \(percentage(snapshot.weekly))%"
+        return "5h \(bar(snapshot.current)) \(percentage(snapshot.current))%\nwk \(bar(snapshot.weekly)) \(percentage(snapshot.weekly))%"
     }
 
     public static func display(for snapshot: CodexUsageSnapshot, now: Date = Date()) -> CodexUsageDisplay {
@@ -21,7 +21,7 @@ public enum CodexUsageDisplayFormatter {
     }
 
     public static func errorTitle() -> String {
-        "5h --%  wk --%"
+        "5h --%\nwk --%"
     }
 
     private static func percentage(_ window: RateWindow?) -> String {

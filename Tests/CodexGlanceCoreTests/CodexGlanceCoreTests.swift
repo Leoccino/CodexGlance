@@ -11,7 +11,7 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▱▱▱ 32%  wk ▰▰▰▱▱ 59%")
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▱▱▱ 32%\nwk ▰▰▰▱▱ 59%")
     }
 
     func testMenuTitleBarMatchesCompactExamples() {
@@ -23,7 +23,7 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▰▰▱ 68%  wk ▰▰▱▱▱ 41%")
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▰▰▱ 68%\nwk ▰▰▱▱▱ 41%")
     }
 
     func testMapperDecodesRPCShape() throws {

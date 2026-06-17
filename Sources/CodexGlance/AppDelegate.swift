@@ -17,7 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        statusItem.button?.title = CodexUsageDisplayFormatter.menuTitle(for: nil)
+        configureStatusButton()
+        setStatusTitle(CodexUsageDisplayFormatter.menuTitle(for: nil))
         rebuildMenu()
         refresh()
 
@@ -44,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         isRefreshing = true
-        statusItem.button?.title = "C.. W.."
+        setStatusTitle("5h ..%\nwk ..%")
         rebuildMenu()
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
@@ -56,18 +57,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.latestSnapshot = snapshot
                     self.latestError = nil
                     self.isRefreshing = false
-                    self.statusItem.button?.title = CodexUsageDisplayFormatter.menuTitle(for: snapshot)
+                    self.setStatusTitle(CodexUsageDisplayFormatter.menuTitle(for: snapshot))
                     self.rebuildMenu()
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.latestError = error
                     self.isRefreshing = false
-                    self.statusItem.button?.title = CodexUsageDisplayFormatter.errorTitle()
+                    self.setStatusTitle(CodexUsageDisplayFormatter.errorTitle())
                     self.rebuildMenu()
                 }
             }
         }
+    }
+
+    private func configureStatusButton() {
+        guard let button = statusItem.button else {
+            return
+        }
+
+        button.cell?.usesSingleLineMode = false
+        button.cell?.wraps = true
+        button.cell?.lineBreakMode = .byClipping
+    }
+
+    private func setStatusTitle(_ title: String) {
+        guard let button = statusItem.button else {
+            return
+        }
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineSpacing = -2
+
+        button.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.monospacedSystemFont(ofSize: 9, weight: .medium),
+                .foregroundColor: NSColor.labelColor,
+                .paragraphStyle: paragraph
+            ]
+        )
     }
 
     private func rebuildMenu() {
@@ -77,7 +107,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             addDisabled("Refreshing...", to: menu)
         } else if let snapshot = latestSnapshot {
             let display = CodexUsageDisplayFormatter.display(for: snapshot)
-            addDisabled(display.title, to: menu)
+            for titleLine in display.title.split(separator: "\n") {
+                addDisabled(String(titleLine), to: menu)
+            }
             menu.addItem(NSMenuItem.separator())
             if let accountLine = display.accountLine {
                 addDisabled(accountLine, to: menu)

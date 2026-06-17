@@ -406,13 +406,12 @@ private enum StatusTitleImageRenderer {
 
         let clampedFraction = min(1, max(0, CGFloat(fraction)))
         let isCompact = rect.height <= 10
-        let lineHeight: CGFloat = isCompact ? 1.25 : 2.4
-        let underlineWidth = width * (isCompact ? 1.18 : 1.25)
-        let y = isCompact ? rect.minY + 0.35 : rect.minY + 0.8
+        let lineHeight: CGFloat = isCompact ? 1.2 : 2.4
+        let y = isCompact ? rect.minY + 0.35 : rect.minY + 0.75
         let trackRect = NSRect(
             x: floor(x),
             y: y,
-            width: max(2, floor(underlineWidth)),
+            width: max(2, floor(width)),
             height: lineHeight
         )
 
@@ -421,7 +420,7 @@ private enum StatusTitleImageRenderer {
             xRadius: lineHeight / 2,
             yRadius: lineHeight / 2
         )
-        NSColor.labelColor.withAlphaComponent(0.16).setFill()
+        NSColor.labelColor.withAlphaComponent(isCompact ? 0.22 : 0.26).setFill()
         track.fill()
 
         guard clampedFraction > 0 else {

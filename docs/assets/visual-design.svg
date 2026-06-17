@@ -34,8 +34,8 @@
     <rect class="surface" x="154" y="232" width="972" height="190" rx="20"/>
 
     <text class="mono" x="218" y="350">5h</text>
-    <rect x="224" y="372" width="162" height="13" rx="6.5" fill="rgba(17, 24, 39, 0.16)"/>
-    <rect x="224" y="372" width="94" height="13" rx="6.5" fill="rgba(103, 232, 249, 0.56)"/>
+    <rect x="224" y="372" width="132" height="13" rx="6.5" fill="rgba(17, 24, 39, 0.26)"/>
+    <rect x="224" y="372" width="77" height="13" rx="6.5" fill="rgba(103, 232, 249, 0.56)"/>
 
     <g transform="translate(500 248) scale(1.55)">
       <path class="track" d="M 25.36 90 A 40 40 0 1 1 94.64 90"/>

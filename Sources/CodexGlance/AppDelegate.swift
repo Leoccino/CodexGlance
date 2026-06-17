@@ -116,11 +116,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         button.title = ""
-        button.imagePosition = .imageOnly
     }
 
     private func setStatusTitle(_ title: String) {
         guard let button = statusItem.button else {
+            return
+        }
+
+        if !title.contains("\n") {
+            statusItem.length = NSStatusItem.variableLength
+            button.image = nil
+            button.imagePosition = .noImage
+            button.title = title
+            button.toolTip = title
             return
         }
 
@@ -129,6 +137,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             color: NSColor.labelColor
         )
         statusItem.length = image.size.width + 4
+        button.title = ""
+        button.imagePosition = .imageOnly
         button.image = image
         button.toolTip = title.replacingOccurrences(of: "\n", with: " / ")
     }

@@ -1,8 +1,8 @@
 # CodexGlance
 
-Codex usage, at a glance.
+**Codex usage, at a glance.**
 
-CodexGlance is a tiny macOS menu bar app that shows the current Codex account usage in the shortest useful form:
+CodexGlance is a tiny macOS menu bar app for people who just want to know one thing: how much Codex usage is left.
 
 ```text
 C68 W41
@@ -12,7 +12,17 @@ C68 W41
 - `W` is the weekly Codex usage window.
 - Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
 
-Click the menu bar item to see reset times, credits, account, and a manual refresh command.
+It is intentionally narrow:
+
+- Codex only.
+- Menu bar only.
+- One glance first; details on click.
+
+Click the menu bar item to see reset times, account, credits, and a manual refresh command.
+
+## Privacy
+
+CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to any third-party service.
 
 ## Run
 

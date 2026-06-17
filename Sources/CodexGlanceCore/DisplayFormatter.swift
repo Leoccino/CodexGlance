@@ -24,7 +24,8 @@ public enum CodexUsageDisplayFormatter {
             CodexUsageMenuLine(
                 label: "5h",
                 remainingPercent: remainingPercentage(snapshot.current),
-                resetText: compactResetDescription(for: snapshot.current, now: now)
+                resetText: compactResetDescription(for: snapshot.current, now: now),
+                resetTimeFractionRemaining: resetTimeFractionRemaining(for: snapshot.current, now: now)
             )
         ]
 
@@ -33,7 +34,8 @@ public enum CodexUsageDisplayFormatter {
                 CodexUsageMenuLine(
                     label: "wk",
                     remainingPercent: remainingPercentage(snapshot.weekly),
-                    resetText: compactResetDescription(for: snapshot.weekly, now: now)
+                    resetText: compactResetDescription(for: snapshot.weekly, now: now),
+                    resetTimeFractionRemaining: resetTimeFractionRemaining(for: snapshot.weekly, now: now)
                 )
             )
         }
@@ -117,6 +119,21 @@ public enum CodexUsageDisplayFormatter {
         }
 
         return "\(minutes)m"
+    }
+
+    private static func resetTimeFractionRemaining(for window: RateWindow?, now: Date) -> Double? {
+        guard
+            let window,
+            let resetsAt = window.resetsAt,
+            let windowMinutes = window.windowMinutes,
+            windowMinutes > 0
+        else {
+            return nil
+        }
+
+        let seconds = max(0, resetsAt.timeIntervalSince(now))
+        let totalSeconds = Double(windowMinutes * 60)
+        return min(1, max(0, seconds / totalSeconds))
     }
 
     private static func resetDescription(for window: RateWindow, now: Date) -> String {

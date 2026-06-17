@@ -230,11 +230,9 @@ private enum StatusTitleImageRenderer {
         let paddingX: CGFloat
         let labelGap: CGFloat
         let gaugeGap: CGFloat
-        let valueGap: CGFloat
         let gaugeSize: CGFloat
         let labelFont: NSFont
         let valueFont: NSFont
-        let resetFont: NSFont
 
         init(lineCount: Int) {
             if lineCount == 1 {
@@ -243,22 +241,18 @@ private enum StatusTitleImageRenderer {
                 paddingX = 3
                 labelGap = 5
                 gaugeGap = 5
-                valueGap = 5
                 gaugeSize = 15
                 labelFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
-                resetFont = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .medium)
             } else {
                 height = 22
                 rowHeight = 10
                 paddingX = 3
                 labelGap = 3
                 gaugeGap = 4
-                valueGap = 4
                 gaugeSize = 9
                 labelFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
-                resetFont = NSFont.monospacedSystemFont(ofSize: 8.5, weight: .medium)
             }
         }
     }
@@ -268,19 +262,14 @@ private enum StatusTitleImageRenderer {
         let metrics = Metrics(lineCount: lines.count)
         let labelAttributes = attributes(font: metrics.labelFont, color: .labelColor)
         let valueAttributes = attributes(font: metrics.valueFont, color: .labelColor)
-        let resetAttributes = attributes(font: metrics.resetFont, color: .secondaryLabelColor)
 
         let labelWidth = ceil(lines.map { textSize($0.label, attributes: labelAttributes).width }.max() ?? 14)
         let valueWidth = ceil(lines.map { textSize(percentText(for: $0), attributes: valueAttributes).width }.max() ?? 24)
-        let resetWidth = ceil(lines.map { textSize($0.resetText ?? "", attributes: resetAttributes).width }.max() ?? 0)
-        let resetGap = resetWidth > 0 ? metrics.valueGap : 0
         let contentWidth = labelWidth
             + metrics.labelGap
             + metrics.gaugeSize
             + metrics.gaugeGap
             + valueWidth
-            + resetGap
-            + resetWidth
         let width = ceil(metrics.paddingX * 2 + contentWidth)
         let image = NSImage(size: NSSize(width: width, height: metrics.height))
 
@@ -292,7 +281,11 @@ private enum StatusTitleImageRenderer {
             let rowRect = rowRect(for: index, lineCount: lines.count, metrics: metrics, width: width)
             var x = metrics.paddingX
 
-            drawText(line.label, atX: x, in: rowRect, attributes: labelAttributes)
+            let lineLabelAttributes = attributes(
+                font: metrics.labelFont,
+                color: labelColor(for: line, state: state)
+            )
+            drawText(line.label, atX: x, in: rowRect, attributes: lineLabelAttributes)
             x += labelWidth + metrics.labelGap
 
             let gaugeRect = NSRect(
@@ -305,12 +298,6 @@ private enum StatusTitleImageRenderer {
             x += metrics.gaugeSize + metrics.gaugeGap
 
             drawText(percentText(for: line), atX: x, in: rowRect, attributes: valueAttributes)
-            x += valueWidth
-
-            if let resetText = line.resetText, !resetText.isEmpty {
-                x += metrics.valueGap
-                drawText(resetText, atX: x, in: rowRect, attributes: resetAttributes)
-            }
         }
 
         image.unlockFocus()
@@ -512,6 +499,33 @@ private enum StatusTitleImageRenderer {
             .foregroundColor: color,
             .kern: 0
         ]
+    }
+
+    private static func labelColor(for line: CodexUsageMenuLine, state: State) -> NSColor {
+        switch state {
+        case .refreshing:
+            return .systemBlue
+        case .error:
+            return .systemRed
+        case .normal:
+            guard let fraction = line.resetTimeFractionRemaining else {
+                return .labelColor
+            }
+
+            if fraction <= 0.15 {
+                return .systemBlue
+            }
+
+            if fraction <= 0.35 {
+                return NSColor.systemBlue.withAlphaComponent(0.78)
+            }
+
+            if fraction <= 0.60 {
+                return .secondaryLabelColor
+            }
+
+            return .labelColor
+        }
     }
 
     private static func progressColor(for percent: Int, state: State) -> NSColor {

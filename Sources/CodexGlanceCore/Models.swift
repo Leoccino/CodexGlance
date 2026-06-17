@@ -97,10 +97,17 @@ public struct CodexUsageMenuLine: Equatable {
     public let label: String
     public let remainingPercent: Int?
     public let resetText: String?
+    public let resetTimeFractionRemaining: Double?
 
-    public init(label: String, remainingPercent: Int?, resetText: String?) {
+    public init(
+        label: String,
+        remainingPercent: Int?,
+        resetText: String?,
+        resetTimeFractionRemaining: Double? = nil
+    ) {
         self.label = label
         self.remainingPercent = remainingPercent
         self.resetText = resetText
+        self.resetTimeFractionRemaining = resetTimeFractionRemaining
     }
 }

@@ -54,6 +54,21 @@ final class CodexGlanceCoreTests: XCTestCase {
         )
     }
 
+    func testMenuLinesIncludeResetTimeFractionRemaining() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let snapshot = CodexUsageSnapshot(
+            current: RateWindow(usedPercent: 12, windowMinutes: 300, resetsAt: now.addingTimeInterval(9_000)),
+            weekly: nil,
+            credits: nil,
+            identity: nil,
+            updatedAt: now
+        )
+
+        let line = CodexUsageDisplayFormatter.menuLines(for: snapshot, includeWeekly: false, now: now)[0]
+
+        XCTAssertEqual(line.resetTimeFractionRemaining ?? -1, 0.5, accuracy: 0.001)
+    }
+
     func testMapperDecodesRPCShape() throws {
         let limits: [String: Any] = [
             "rateLimits": [

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Assets/CodexGlanceIcon.png" width="96" alt="CodexGlance icon">
+  <img src="Assets/CodexGlanceLogo.png" width="112" alt="CodexGlance logo">
 </p>
 
 # CodexGlance

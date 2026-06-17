@@ -61,29 +61,12 @@ nav {
   font-weight: 760;
 }
 
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  color: var(--ink);
-}
-
-.brand-mark svg {
-  width: 100%;
-  height: 100%;
-}
-
-.brand-mark rect {
-  fill: var(--surface);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-
-.mark-line {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2.4;
-  stroke-linecap: round;
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  display: block;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 nav {
@@ -242,13 +225,22 @@ nav a {
   padding-top: 154px;
 }
 
+.hero-logo {
+  width: clamp(72px, 8vw, 108px);
+  height: clamp(72px, 8vw, 108px);
+  display: block;
+  object-fit: contain;
+  margin-bottom: 22px;
+  border-radius: 22px;
+  box-shadow: 0 20px 54px rgba(15, 23, 42, 0.12);
+}
+
 .eyebrow {
   margin: 0 0 12px;
   color: #38645a;
   font-size: 13px;
   font-weight: 780;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 h1,

@@ -26,6 +26,18 @@ final class CodexGlanceCoreTests: XCTestCase {
         XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▰▰▱ 68%\nwk ▰▰▱▱▱ 41%")
     }
 
+    func testMenuTitleCanHideWeeklyUsage() {
+        let snapshot = CodexUsageSnapshot(
+            current: RateWindow(usedPercent: 32, windowMinutes: 300, resetsAt: nil),
+            weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: nil),
+            credits: nil,
+            identity: nil,
+            updatedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: false), "5h ▰▰▰▰▱ 68%")
+    }
+
     func testMapperDecodesRPCShape() throws {
         let limits: [String: Any] = [
             "rateLimits": [

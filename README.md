@@ -6,11 +6,10 @@ CodexGlance is a tiny macOS menu bar app for people who just want to know one th
 
 ```text
 5h ▰▰▰▰▱ 68%
-wk ▰▰▱▱▱ 41%
 ```
 
 - `5h` is the current 5-hour Codex usage window.
-- `wk` is the weekly Codex usage window.
+- `wk` is the optional weekly Codex usage window.
 - Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
 
 It is intentionally narrow:
@@ -20,12 +19,31 @@ It is intentionally narrow:
 - One glance first; details on click.
 
 Click the menu bar item to see reset times, account, credits, and a manual refresh command.
+Weekly usage is hidden by default and can be added from the menu when you need it.
 
 ## Privacy
 
 CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to any third-party service.
 
 ## Run
+
+Clone, build, and launch:
+
+```sh
+git clone https://github.com/Leoccino/CodexGlance.git
+cd CodexGlance
+./Scripts/package-app.sh
+open .build/CodexGlance.app
+```
+
+Requirements:
+
+- macOS 13 or newer.
+- Codex installed and signed in locally.
+
+Weekly usage is hidden by default. Click the menu bar item and enable `Show Weekly in Menu Bar` when you want it.
+
+For development, you can run it directly:
 
 ```sh
 swift run CodexGlance
@@ -42,13 +60,6 @@ If SwiftPM cannot find the active macOS SDK, use the direct build script:
 ```sh
 ./Scripts/build.sh
 .build/manual/CodexGlance
-```
-
-Package and launch as a local menu bar app:
-
-```sh
-./Scripts/package-app.sh
-open .build/CodexGlance.app
 ```
 
 One-shot terminal check with the direct build:

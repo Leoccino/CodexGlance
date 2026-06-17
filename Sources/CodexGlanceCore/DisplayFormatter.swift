@@ -1,17 +1,22 @@
 import Foundation
 
 public enum CodexUsageDisplayFormatter {
-    public static func menuTitle(for snapshot: CodexUsageSnapshot?) -> String {
+    public static func menuTitle(for snapshot: CodexUsageSnapshot?, includeWeekly: Bool = true) -> String {
         guard let snapshot else {
-            return "5h --%\nwk --%"
+            return includeWeekly ? "5h --%\nwk --%" : "5h --%"
         }
 
-        return "5h \(bar(snapshot.current)) \(percentage(snapshot.current))%\nwk \(bar(snapshot.weekly)) \(percentage(snapshot.weekly))%"
+        let current = "5h \(bar(snapshot.current)) \(percentage(snapshot.current))%"
+        guard includeWeekly else {
+            return current
+        }
+
+        return "\(current)\nwk \(bar(snapshot.weekly)) \(percentage(snapshot.weekly))%"
     }
 
-    public static func display(for snapshot: CodexUsageSnapshot, now: Date = Date()) -> CodexUsageDisplay {
+    public static func display(for snapshot: CodexUsageSnapshot, includeWeekly: Bool = true, now: Date = Date()) -> CodexUsageDisplay {
         CodexUsageDisplay(
-            title: menuTitle(for: snapshot),
+            title: menuTitle(for: snapshot, includeWeekly: includeWeekly),
             currentLine: "5h: \(windowDescription(snapshot.current, now: now))",
             weeklyLine: "wk: \(windowDescription(snapshot.weekly, now: now))",
             creditsLine: creditsDescription(snapshot.credits),
@@ -20,8 +25,8 @@ public enum CodexUsageDisplayFormatter {
         )
     }
 
-    public static func errorTitle() -> String {
-        "5h --%\nwk --%"
+    public static func errorTitle(includeWeekly: Bool = true) -> String {
+        includeWeekly ? "5h --%\nwk --%" : "5h --%"
     }
 
     private static func percentage(_ window: RateWindow?) -> String {

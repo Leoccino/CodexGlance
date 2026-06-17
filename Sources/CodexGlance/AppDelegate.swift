@@ -76,9 +76,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        button.cell?.usesSingleLineMode = false
-        button.cell?.wraps = true
-        button.cell?.lineBreakMode = .byClipping
+        button.title = ""
+        button.imagePosition = .imageOnly
     }
 
     private func setStatusTitle(_ title: String) {
@@ -86,18 +85,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        paragraph.lineSpacing = -2
-
-        button.attributedTitle = NSAttributedString(
-            string: title,
-            attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 9, weight: .medium),
-                .foregroundColor: NSColor.labelColor,
-                .paragraphStyle: paragraph
-            ]
+        let image = StatusTitleImageRenderer.render(
+            title,
+            color: NSColor.labelColor
         )
+        statusItem.length = image.size.width + 4
+        button.image = image
+        button.toolTip = title.replacingOccurrences(of: "\n", with: " / ")
     }
 
     private func rebuildMenu() {
@@ -144,5 +138,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         menu.addItem(item)
+    }
+}
+
+private enum StatusTitleImageRenderer {
+    static func render(_ title: String, color: NSColor) -> NSImage {
+        let lines = normalizedLines(from: title)
+        let font = NSFont.monospacedSystemFont(ofSize: 8, weight: .semibold)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color
+        ]
+
+        let lineSizes = lines.map { ($0 as NSString).size(withAttributes: attributes) }
+        let contentWidth = ceil(lineSizes.map(\.width).max() ?? 44)
+        let width = max(48, contentWidth + 6)
+        let height: CGFloat = 20
+        let image = NSImage(size: NSSize(width: width, height: height))
+
+        image.lockFocus()
+        NSColor.clear.setFill()
+        NSRect(origin: .zero, size: image.size).fill()
+
+        let yPositions: [CGFloat] = [10.4, 1.4]
+        for (index, line) in lines.enumerated() {
+            let string = line as NSString
+            let lineWidth = lineSizes[index].width
+            let x = floor((width - lineWidth) / 2)
+            string.draw(at: NSPoint(x: x, y: yPositions[index]), withAttributes: attributes)
+        }
+
+        image.unlockFocus()
+        image.isTemplate = false
+        return image
+    }
+
+    private static func normalizedLines(from title: String) -> [String] {
+        let lines = title
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+
+        if lines.count >= 2 {
+            return Array(lines.prefix(2))
+        }
+
+        return [lines.first ?? "", ""]
     }
 }

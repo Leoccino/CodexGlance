@@ -281,11 +281,14 @@ private enum StatusTitleImageRenderer {
             let rowRect = rowRect(for: index, lineCount: lines.count, metrics: metrics, width: width)
             var x = metrics.paddingX
 
-            let lineLabelAttributes = attributes(
-                font: metrics.labelFont,
-                color: labelColor(for: line, state: state)
+            drawText(line.label, atX: x, in: rowRect, attributes: labelAttributes)
+            drawResetUnderline(
+                for: line,
+                atX: x,
+                width: labelWidth,
+                in: rowRect,
+                state: state
             )
-            drawText(line.label, atX: x, in: rowRect, attributes: lineLabelAttributes)
             x += labelWidth + metrics.labelGap
 
             let gaugeRect = NSRect(
@@ -342,6 +345,54 @@ private enum StatusTitleImageRenderer {
             at: NSPoint(x: floor(x), y: floor(rect.midY - size.height / 2)),
             withAttributes: attributes
         )
+    }
+
+    private static func drawResetUnderline(
+        for line: CodexUsageMenuLine,
+        atX x: CGFloat,
+        width: CGFloat,
+        in rect: NSRect,
+        state: State
+    ) {
+        guard state != .error, let fraction = line.resetTimeFractionRemaining else {
+            return
+        }
+
+        let clampedFraction = min(1, max(0, CGFloat(fraction)))
+        let lineHeight: CGFloat = rect.height <= 10 ? 0.8 : 1.2
+        let y = rect.height <= 10 ? rect.minY + 0.5 : rect.minY + 1.5
+        let trackRect = NSRect(
+            x: floor(x),
+            y: y,
+            width: max(2, floor(width)),
+            height: lineHeight
+        )
+
+        let track = NSBezierPath(
+            roundedRect: trackRect,
+            xRadius: lineHeight / 2,
+            yRadius: lineHeight / 2
+        )
+        NSColor.labelColor.withAlphaComponent(0.12).setFill()
+        track.fill()
+
+        guard clampedFraction > 0 else {
+            return
+        }
+
+        let fillRect = NSRect(
+            x: trackRect.minX,
+            y: trackRect.minY,
+            width: max(lineHeight, trackRect.width * clampedFraction),
+            height: trackRect.height
+        )
+        let fill = NSBezierPath(
+            roundedRect: fillRect,
+            xRadius: lineHeight / 2,
+            yRadius: lineHeight / 2
+        )
+        resetUnderlineColor(for: clampedFraction, state: state).setFill()
+        fill.fill()
     }
 
     private static func drawGauge(in rect: NSRect, percent: Int?, state: State) {
@@ -501,30 +552,26 @@ private enum StatusTitleImageRenderer {
         ]
     }
 
-    private static func labelColor(for line: CodexUsageMenuLine, state: State) -> NSColor {
+    private static func resetUnderlineColor(for fraction: CGFloat, state: State) -> NSColor {
         switch state {
         case .refreshing:
             return .systemBlue
         case .error:
             return .systemRed
         case .normal:
-            guard let fraction = line.resetTimeFractionRemaining else {
-                return .labelColor
-            }
-
             if fraction <= 0.15 {
-                return .systemBlue
+                return NSColor.systemBlue.withAlphaComponent(0.95)
             }
 
             if fraction <= 0.35 {
-                return NSColor.systemBlue.withAlphaComponent(0.78)
+                return NSColor.systemBlue.withAlphaComponent(0.72)
             }
 
             if fraction <= 0.60 {
-                return .secondaryLabelColor
+                return NSColor.systemBlue.withAlphaComponent(0.45)
             }
 
-            return .labelColor
+            return NSColor.systemBlue.withAlphaComponent(0.28)
         }
     }
 

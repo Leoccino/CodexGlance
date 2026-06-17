@@ -8,35 +8,27 @@
     <meta property="og:title" content="CodexGlance">
     <meta property="og:description" content="Codex usage, at a glance.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://leoccino.github.io/CodexGlance/assets/codexglance-logo.png">
-    <link rel="icon" href="assets/codexglance-logo.png">
+    <meta property="og:image" content="https://leoccino.github.io/CodexGlance/assets/codexglance-icon.png">
+    <link rel="icon" href="assets/codexglance-icon.png">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="site-header" aria-label="Site navigation">
       <a class="brand" href="#top" aria-label="CodexGlance home">
-        <img class="brand-logo" src="assets/codexglance-logo.png" alt="" aria-hidden="true">
+        <img class="brand-logo" src="assets/codexglance-icon.png" alt="" aria-hidden="true">
         <span>CodexGlance</span>
       </a>
       <nav>
         <a href="#design">Design</a>
         <a href="#install">Install</a>
+        <a href="https://github.com/Leoccino/CodexGlance">GitHub</a>
         <a class="nav-cta" href="https://github.com/Leoccino/CodexGlance/releases">Download</a>
       </nav>
     </header>
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-visual">
-          <figure class="capture-frame">
-            <figcaption>Actual macOS menu bar capture</figcaption>
-            <div class="capture-strip">
-              <img src="assets/codexglance-menubar.png" alt="CodexGlance menu bar item showing 5h, a gauge, and 37 percent remaining">
-            </div>
-          </figure>
-        </div>
-
-        <div class="hero-copy">
+        <div class="hero-inner">
           <p class="eyebrow">macOS menu bar for Codex users</p>
           <h1 id="hero-title">CodexGlance</h1>
           <p class="slogan">Codex usage, at a glance.</p>
@@ -47,10 +39,15 @@
             <a class="button primary" href="https://github.com/Leoccino/CodexGlance/releases">Download for macOS</a>
             <a class="button secondary" href="https://github.com/Leoccino/CodexGlance">View on GitHub</a>
           </div>
+
+          <figure class="actual-capture">
+            <figcaption>Actual macOS menu bar capture</figcaption>
+            <img src="assets/codexglance-menubar.png" alt="CodexGlance menu bar item showing 5h, a gauge, and 37 percent remaining">
+          </figure>
         </div>
       </section>
 
-      <section class="quick-strip" aria-label="Product focus">
+      <section class="focus-strip" aria-label="Product focus">
         <div>
           <strong>Codex only</strong>
           <span>No dashboards, no extra accounts.</span>
@@ -65,14 +62,15 @@
         </div>
       </section>
 
-      <section class="section" id="design">
-        <div class="section-copy">
+      <section class="section design-section" id="design">
+        <div class="section-head">
           <p class="eyebrow">Actual rendering</p>
           <h2>Actual menu bar drawing, enlarged.</h2>
           <p>
-            The enlarged view below uses the same gauge model as the app: 210 degree start, 240 degree sweep, and a needle mapped to the remaining percentage.
+            The enlarged view uses the same gauge model as the app: 210 degree start, 240 degree sweep, and a needle mapped to the remaining percentage.
           </p>
         </div>
+
         <div class="status-breakdown" aria-label="Expanded CodexGlance menu bar rendering">
           <div class="large-status">
             <span class="large-window">
@@ -106,7 +104,7 @@
         </div>
       </section>
 
-      <section class="section split">
+      <section class="section split-section">
         <div class="section-copy">
           <p class="eyebrow">Default view</p>
           <h2>Current window first. Weekly only when needed.</h2>
@@ -128,7 +126,7 @@
         </div>
       </section>
 
-      <section class="section install" id="install">
+      <section class="section install-section" id="install">
         <div class="section-copy">
           <p class="eyebrow">Install</p>
           <h2>For non-technical users.</h2>
@@ -153,7 +151,6 @@
           </li>
         </ol>
       </section>
-
     </main>
 
     <footer class="site-footer">

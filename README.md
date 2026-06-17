@@ -1,47 +1,55 @@
 <p align="center">
-  <img src="Assets/CodexGlanceLogo.png" width="112" alt="CodexGlance logo">
+  <img src="Assets/CodexGlanceIcon.png" width="96" alt="CodexGlance icon">
 </p>
 
-# CodexGlance
+<h1 align="center">CodexGlance</h1>
 
-**Codex usage, at a glance.**
+<p align="center">
+  <strong>Codex usage, at a glance.</strong>
+</p>
 
-CodexGlance is a tiny macOS menu bar app for people who just want to know one thing: how much Codex usage is left.
+<p align="center">
+  <a href="https://leoccino.github.io/CodexGlance/">Website</a>
+  ·
+  <a href="https://github.com/Leoccino/CodexGlance/releases">Download</a>
+  ·
+  <a href="https://github.com/Leoccino/CodexGlance">GitHub</a>
+</p>
 
-```text
-5h [gauge] 88%
-```
+CodexGlance is a tiny macOS menu bar app for Codex users who only need one answer while working: how much usage is left right now.
 
-- `5h` is the current 5-hour Codex usage window.
-- `wk` is the optional weekly Codex usage window.
-- Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
-- Click the menu bar item to see the exact reset countdown for each usage window.
+<p align="center">
+  <img src="docs/assets/codexglance-menubar.png" width="184" alt="CodexGlance menu bar item showing current Codex usage">
+</p>
+
+## Product Focus
+
+CodexGlance is intentionally narrow:
+
+- **Codex only:** built for people who use Codex and want a dedicated usage glance.
+- **Menu bar only:** no dashboard to keep open, no extra account, no separate service.
+- **Current window first:** the 5-hour Codex usage window is shown by default.
+- **Weekly optional:** weekly usage can be added from the menu when you want it.
+
+The menu bar item shows:
+
+- `5h`: current 5-hour Codex usage window.
+- `wk`: optional weekly Codex usage window.
+- Percentage: remaining usage, rounded to whole numbers.
+- Gauge: red for low remaining, orange for caution, green for healthy.
+- Underline: time left before the current window resets.
+
+Click the menu bar item to see account details, reset times, the last update time, and a manual refresh command.
 
 ## Visual Design
 
-CodexGlance uses two small visual cues:
+The public site and README use the same visual model as the macOS app: a 210 degree gauge start, 240 degree sweep, and a needle mapped to the remaining percentage.
 
 <p align="center">
-  <img src="Assets/visual-design.svg" alt="CodexGlance visual design: usage gauge and reset countdown line">
+  <img src="Assets/visual-design.svg" alt="CodexGlance visual design: enlarged menu bar gauge and reset line">
 </p>
 
-- **Usage gauge:** the mini gauge shows remaining usage. Left is low remaining and red, middle is caution and orange, right is healthy and green. The needle points to the current remaining percentage.
-- **Reset line:** the cool-toned line under `5h` shows time left before the current window resets. A longer line means more time left; a shorter, brighter blue line means the next reset is closer.
-
-It is intentionally narrow:
-
-- Codex only.
-- Menu bar only.
-- One glance first; details on click.
-
-Click the menu bar item to see account, credits, reset times, the last data update time, and a manual refresh command.
-Weekly usage is hidden by default and can be added from the menu when you need it.
-
-## Privacy
-
-CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to any third-party service.
-
-## Download
+## Install
 
 Download `CodexGlance.app.zip` from the latest [GitHub release](https://github.com/Leoccino/CodexGlance/releases), unzip it, and open `CodexGlance.app`.
 
@@ -52,17 +60,11 @@ Requirements:
 - macOS 13 or newer.
 - Codex installed and signed in locally.
 
-Weekly usage is hidden by default. Click the menu bar item and enable `Show Weekly in Menu Bar` when you want it.
+## Privacy
 
-## Website
-
-The product site lives in `docs/` and is published with GitHub Pages:
-
-https://leoccino.github.io/CodexGlance/
+CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to any third-party service.
 
 ## Build From Source
-
-Clone, build, and launch:
 
 ```sh
 git clone https://github.com/Leoccino/CodexGlance.git
@@ -94,12 +96,6 @@ Create a release zip locally:
 
 ```sh
 ./Scripts/package-release.sh
-```
-
-One-shot terminal check with the direct build:
-
-```sh
-.build/manual/CodexGlance --print
 ```
 
 CodexGlance reads usage from the local Codex app server:

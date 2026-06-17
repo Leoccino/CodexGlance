@@ -5,12 +5,11 @@
   --ink: #111827;
   --muted: #5f6b7a;
   --line: #dfe7df;
-  --soft: #eef4ee;
+  --soft: #eef5ec;
   --green: #22c55e;
   --orange: #f97316;
   --red: #ef4444;
   --cyan: #67e8f9;
-  --blue: #2563eb;
 }
 
 * {
@@ -35,17 +34,15 @@ a {
 }
 
 .site-header {
-  position: fixed;
+  position: sticky;
   z-index: 20;
   top: 0;
-  right: 0;
-  left: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 15px clamp(20px, 5vw, 64px);
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  padding: 14px clamp(20px, 5vw, 64px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   backdrop-filter: blur(16px);
 }
@@ -66,7 +63,6 @@ nav {
   height: 26px;
   display: block;
   object-fit: contain;
-  border-radius: 6px;
 }
 
 nav {
@@ -90,62 +86,20 @@ nav a {
 }
 
 .hero {
-  position: relative;
-  min-height: 88vh;
-  display: grid;
+  min-height: calc(100vh - 63px);
+  display: flex;
   align-items: center;
-  padding: 128px clamp(24px, 7vw, 96px) 72px;
-  overflow: hidden;
   border-bottom: 1px solid var(--line);
 }
 
-.hero-visual {
-  position: absolute;
-  inset: 82px 0 auto;
-  height: 250px;
-  opacity: 0.98;
-}
-
-.capture-frame {
-  position: absolute;
-  left: 50%;
-  top: 34px;
-  transform: translateX(-50%);
-  margin: 0;
-  display: grid;
-  gap: 14px;
-  justify-items: center;
-}
-
-.capture-frame figcaption {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.capture-strip {
-  padding: 24px 30px;
-  background: color-mix(in srgb, #edf7ea 72%, #ffffff 28%);
-  border: 1px solid #dbe7d8;
-  border-radius: 8px;
-  box-shadow: 0 32px 72px rgba(15, 23, 42, 0.12);
-}
-
-.capture-strip img {
-  width: clamp(184px, 28vw, 340px);
-  display: block;
-  object-fit: contain;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 2;
-  max-width: 680px;
-  padding-top: 196px;
+.hero-inner {
+  width: min(1080px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 76px 0 60px;
 }
 
 .eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   color: #38645a;
   font-size: 13px;
   font-weight: 780;
@@ -160,20 +114,26 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(54px, 9vw, 118px);
-  line-height: 0.92;
+  max-width: 980px;
+  font-size: clamp(62px, 12vw, 146px);
+  line-height: 0.9;
+}
+
+h2 {
+  font-size: clamp(36px, 6vw, 76px);
+  line-height: 0.96;
 }
 
 .slogan {
-  margin: 16px 0 0;
-  font-size: clamp(24px, 3.2vw, 38px);
-  line-height: 1.12;
+  margin: 20px 0 0;
+  font-size: clamp(26px, 4vw, 44px);
+  line-height: 1.1;
   font-weight: 760;
 }
 
 .lede {
-  max-width: 610px;
-  margin: 20px 0 0;
+  max-width: 660px;
+  margin: 22px 0 0;
   color: var(--muted);
   font-size: clamp(18px, 2.1vw, 23px);
   line-height: 1.45;
@@ -208,7 +168,30 @@ h1 {
   background: color-mix(in srgb, var(--surface) 82%, transparent);
 }
 
-.quick-strip {
+.actual-capture {
+  width: fit-content;
+  margin: 44px 0 0;
+  padding: 18px 20px;
+  background: color-mix(in srgb, #edf7ea 72%, #ffffff 28%);
+  border: 1px solid #dbe7d8;
+  border-radius: 8px;
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.1);
+}
+
+.actual-capture figcaption {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.actual-capture img {
+  width: 184px;
+  height: auto;
+  display: block;
+}
+
+.focus-strip {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;
@@ -216,7 +199,7 @@ h1 {
   border-bottom: 1px solid var(--line);
 }
 
-.quick-strip div {
+.focus-strip div {
   min-height: 112px;
   display: flex;
   flex-direction: column;
@@ -226,38 +209,37 @@ h1 {
   background: var(--surface);
 }
 
-.quick-strip strong {
+.focus-strip strong {
   font-size: 18px;
 }
 
-.quick-strip span {
+.focus-strip span {
   color: var(--muted);
   line-height: 1.45;
 }
 
 .section {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.92fr) minmax(320px, 1.08fr);
-  gap: clamp(28px, 6vw, 84px);
-  align-items: center;
-  padding: 90px clamp(24px, 7vw, 96px);
+  padding: 92px clamp(24px, 7vw, 96px);
   border-bottom: 1px solid var(--line);
 }
 
-.section-copy h2 {
-  font-size: clamp(34px, 5vw, 64px);
-  line-height: 1;
+.design-section {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(420px, 1.18fr);
+  gap: clamp(32px, 7vw, 92px);
+  align-items: center;
 }
 
+.section-head p:not(.eyebrow),
 .section-copy p:not(.eyebrow) {
-  margin: 20px 0 0;
+  margin: 22px 0 0;
   color: var(--muted);
   font-size: 19px;
   line-height: 1.55;
 }
 
 .status-breakdown {
-  padding: clamp(24px, 4vw, 42px);
+  padding: clamp(22px, 3vw, 34px);
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -380,7 +362,11 @@ h1 {
   line-height: 1.42;
 }
 
-.split {
+.split-section {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: clamp(28px, 6vw, 84px);
+  align-items: center;
   background: var(--surface);
 }
 
@@ -415,7 +401,10 @@ h1 {
   line-height: 1.5;
 }
 
-.install {
+.install-section {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: clamp(28px, 6vw, 84px);
   align-items: start;
 }
 
@@ -484,61 +473,36 @@ code {
   border-top: 1px solid var(--line);
 }
 
-@media (max-width: 820px) {
-  .site-header {
-    position: sticky;
-    padding: 14px 18px;
-  }
-
+@media (max-width: 880px) {
   nav {
     display: none;
   }
 
   .hero {
     min-height: auto;
-    padding: 92px 20px 48px;
   }
 
-  .hero-visual {
-    position: relative;
-    inset: auto;
-    height: 150px;
-    order: -1;
+  .hero-inner {
+    width: calc(100% - 40px);
+    margin-right: auto;
+    margin-left: auto;
+    padding: 64px 0 48px;
   }
 
-  .capture-frame {
-    top: 0;
-    left: 0;
-    transform: none;
-    justify-items: start;
+  h1 {
+    font-size: clamp(48px, 14vw, 56px);
   }
 
-  .capture-strip {
-    padding: 18px 20px;
-  }
-
-  .capture-strip img {
-    width: min(300px, calc(100vw - 80px));
-  }
-
-  .hero-copy {
-    padding-top: 32px;
-  }
-
-  .quick-strip,
-  .section,
+  .focus-strip,
+  .design-section,
+  .split-section,
+  .install-section,
   .feature-list,
   .design-facts {
     grid-template-columns: 1fr;
   }
 
-  .large-status {
-    gap: 14px;
-    min-height: 150px;
-    padding: 18px;
-  }
-
-  .quick-strip div,
+  .focus-strip div,
   .section {
     padding-left: 20px;
     padding-right: 20px;
@@ -547,6 +511,12 @@ code {
   .section {
     padding-top: 58px;
     padding-bottom: 58px;
+  }
+
+  .large-status {
+    gap: 14px;
+    min-height: 150px;
+    padding: 18px;
   }
 
   .site-footer {

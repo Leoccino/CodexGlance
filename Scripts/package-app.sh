@@ -9,12 +9,11 @@ RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 VERSION="${CODEXGLANCE_VERSION:-0.1.1}"
 
 "${ROOT_DIR}/Scripts/build.sh" >/dev/null
-ICON_PATH="$("${ROOT_DIR}/Scripts/generate-icon.sh")"
 
 rm -rf "${APP_DIR}"
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 cp "${ROOT_DIR}/.build/manual/CodexGlance" "${MACOS_DIR}/CodexGlance"
-cp "${ICON_PATH}" "${RESOURCES_DIR}/CodexGlanceIcon.png"
+cp "${ROOT_DIR}/Assets/CodexGlanceIcon.png" "${RESOURCES_DIR}/CodexGlanceIcon.png"
 
 cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

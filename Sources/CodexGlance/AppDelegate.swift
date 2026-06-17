@@ -144,7 +144,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 private enum StatusTitleImageRenderer {
     static func render(_ title: String, color: NSColor) -> NSImage {
         let lines = normalizedLines(from: title)
-        let font = NSFont.monospacedSystemFont(ofSize: 8, weight: .semibold)
+        let font = NSFont.monospacedSystemFont(ofSize: 9.5, weight: .semibold)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: color
@@ -152,15 +152,19 @@ private enum StatusTitleImageRenderer {
 
         let lineSizes = lines.map { ($0 as NSString).size(withAttributes: attributes) }
         let contentWidth = ceil(lineSizes.map(\.width).max() ?? 44)
-        let width = max(48, contentWidth + 6)
-        let height: CGFloat = 20
+        let width = max(56, contentWidth + 8)
+        let height: CGFloat = 23
         let image = NSImage(size: NSSize(width: width, height: height))
 
         image.lockFocus()
         NSColor.clear.setFill()
         NSRect(origin: .zero, size: image.size).fill()
 
-        let yPositions: [CGFloat] = [10.4, 1.4]
+        let lineHeight = ceil(font.boundingRectForFont.height)
+        let lineGap: CGFloat = -1
+        let totalTextHeight = lineHeight * 2 + lineGap
+        let bottomY = floor((height - totalTextHeight) / 2)
+        let yPositions: [CGFloat] = [bottomY + lineHeight + lineGap, bottomY]
         for (index, line) in lines.enumerated() {
             let string = line as NSString
             let lineWidth = lineSizes[index].width

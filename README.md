@@ -54,6 +54,10 @@ Requirements:
 
 Weekly usage is hidden by default. Click the menu bar item and enable `Show Weekly in Menu Bar` when you want it.
 
+## Website
+
+The product site lives in `docs/` and is ready for GitHub Pages.
+
 ## Build From Source
 
 Clone, build, and launch:

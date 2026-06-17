@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CodexGlance - Codex usage, at a glance.</title>
+    <meta name="description" content="A tiny macOS menu bar app for Codex users who want to see remaining usage at a glance.">
+    <meta property="og:title" content="CodexGlance">
+    <meta property="og:description" content="Codex usage, at a glance.">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header" aria-label="Site navigation">
+      <a class="brand" href="#top" aria-label="CodexGlance home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" focusable="false">
+            <rect x="6" y="6" width="36" height="36" rx="10"></rect>
+            <path d="M16 27c3 6 13 7 18 1" class="mark-line"></path>
+            <path d="M17 17h14" class="mark-line"></path>
+            <path d="M17 22h8" class="mark-line"></path>
+          </svg>
+        </span>
+        <span>CodexGlance</span>
+      </a>
+      <nav>
+        <a href="#design">Design</a>
+        <a href="#install">Install</a>
+        <a href="#privacy">Privacy</a>
+        <a class="nav-cta" href="https://github.com/Leoccino/CodexGlance/releases">Download</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-visual" aria-hidden="true">
+          <div class="menu-shell">
+            <div class="menu-dot red"></div>
+            <div class="menu-dot yellow"></div>
+            <div class="menu-dot green"></div>
+            <span class="menu-word">Finder</span>
+            <span class="menu-word">File</span>
+            <span class="menu-word">Edit</span>
+            <span class="menu-spacer"></span>
+            <div class="status-pill">
+              <span class="window-label">
+                <span>5h</span>
+                <span class="reset-line"><span></span></span>
+              </span>
+              <svg class="mini-gauge" viewBox="0 0 48 48">
+                <path d="M10 33C6 22 11 12 21 8"></path>
+                <path d="M24 7C34 7 42 15 43 25"></path>
+                <path d="M42 29C40 38 32 43 23 42"></path>
+                <line x1="24" y1="28" x2="37" y2="17"></line>
+                <circle cx="24" cy="28" r="3.5"></circle>
+              </svg>
+              <span class="percent">88%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow">macOS menu bar for Codex users</p>
+          <h1 id="hero-title">CodexGlance</h1>
+          <p class="slogan">Codex usage, at a glance.</p>
+          <p class="lede">
+            A tiny app for people who only want to know how much Codex usage is left, without opening another panel.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/Leoccino/CodexGlance/releases">Download for macOS</a>
+            <a class="button secondary" href="https://github.com/Leoccino/CodexGlance">View on GitHub</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="quick-strip" aria-label="Product focus">
+        <div>
+          <strong>Codex only</strong>
+          <span>No dashboards, no extra accounts.</span>
+        </div>
+        <div>
+          <strong>Menu bar only</strong>
+          <span>Current usage stays visible while you work.</span>
+        </div>
+        <div>
+          <strong>One glance first</strong>
+          <span>Details stay one click away.</span>
+        </div>
+      </section>
+
+      <section class="section" id="design">
+        <div class="section-copy">
+          <p class="eyebrow">Visual language</p>
+          <h2>Two small signals, one clear answer.</h2>
+          <p>
+            The default view stays compact. The gauge shows remaining usage. The line under the window label shows how close the next reset is.
+          </p>
+        </div>
+        <img class="explainer" src="assets/visual-design.svg" alt="Diagram explaining the usage gauge and reset countdown line">
+      </section>
+
+      <section class="section split">
+        <div class="section-copy">
+          <p class="eyebrow">Default view</p>
+          <h2>Current window first. Weekly only when needed.</h2>
+          <p>
+            CodexGlance opens with the 5-hour window only. Weekly usage can be added from the menu when it matters.
+          </p>
+        </div>
+        <div class="feature-list">
+          <div class="feature">
+            <span class="feature-label">5h</span>
+            <strong>Current usage window</strong>
+            <p>The number is remaining percentage, matching Codex's Usage remaining panel.</p>
+          </div>
+          <div class="feature">
+            <span class="feature-label">wk</span>
+            <strong>Optional weekly view</strong>
+            <p>Keep it hidden by default, then turn it on from the menu when you want the broader limit.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section install" id="install">
+        <div class="section-copy">
+          <p class="eyebrow">Install</p>
+          <h2>For non-technical users.</h2>
+          <p>No terminal required. Download the app, unzip it, and open it from Applications.</p>
+        </div>
+        <ol class="steps">
+          <li>
+            <strong>Download</strong>
+            <span>Get <code>CodexGlance.app.zip</code> from GitHub Releases.</span>
+          </li>
+          <li>
+            <strong>Move</strong>
+            <span>Unzip it and drag <code>CodexGlance.app</code> into Applications.</span>
+          </li>
+          <li>
+            <strong>Open once</strong>
+            <span>Right-click the app, choose Open, then confirm Open.</span>
+          </li>
+          <li>
+            <strong>Glance</strong>
+            <span>Codex usage appears in the macOS menu bar.</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section privacy" id="privacy">
+        <div class="section-copy">
+          <p class="eyebrow">Privacy</p>
+          <h2>Local by design.</h2>
+          <p>
+            CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to a third-party service.
+          </p>
+        </div>
+        <a class="button primary" href="https://github.com/Leoccino/CodexGlance/releases">Download CodexGlance</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>CodexGlance</span>
+      <span>Codex usage, at a glance.</span>
+    </footer>
+  </body>
+</html>

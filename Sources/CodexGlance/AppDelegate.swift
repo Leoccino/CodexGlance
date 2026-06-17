@@ -379,19 +379,36 @@ private enum StatusTitleImageRenderer {
         NSColor.labelColor.withAlphaComponent(0.18).setStroke()
         track.stroke()
 
-        if percent != nil, fraction > 0 {
-            let progress = NSBezierPath()
-            progress.lineCapStyle = .round
-            progress.lineWidth = lineWidth
-            progress.appendArc(
-                withCenter: center,
+        if state == .refreshing {
+            drawGaugeArc(
+                center: center,
                 radius: radius,
                 startAngle: startAngle,
-                endAngle: startAngle - sweep * fraction,
-                clockwise: true
+                endAngle: endAngle,
+                lineWidth: lineWidth,
+                color: NSColor.systemBlue.withAlphaComponent(0.55)
             )
-            progressColor(for: percent ?? 0, state: state).setStroke()
-            progress.stroke()
+        } else if state == .error {
+            drawGaugeArc(
+                center: center,
+                radius: radius,
+                startAngle: startAngle,
+                endAngle: endAngle,
+                lineWidth: lineWidth,
+                color: NSColor.systemRed.withAlphaComponent(0.58)
+            )
+        } else {
+            drawGaugeZones(
+                center: center,
+                radius: radius,
+                startAngle: startAngle,
+                sweep: sweep,
+                lineWidth: lineWidth
+            )
+        }
+
+        guard let percent else {
+            return
         }
 
         let needleAngle = startAngle - sweep * fraction
@@ -405,11 +422,11 @@ private enum StatusTitleImageRenderer {
         needle.lineWidth = max(0.8, rect.width * 0.07)
         needle.move(to: center)
         needle.line(to: needleEnd)
-        gaugeNeedleColor(for: state).setStroke()
+        progressColor(for: percent, state: state).setStroke()
         needle.stroke()
 
         let dotSize = max(2, rect.width * 0.18)
-        gaugeNeedleColor(for: state).setFill()
+        progressColor(for: percent, state: state).setFill()
         NSBezierPath(
             ovalIn: NSRect(
                 x: center.x - dotSize / 2,
@@ -418,6 +435,61 @@ private enum StatusTitleImageRenderer {
                 height: dotSize
             )
         ).fill()
+    }
+
+    private static func drawGaugeZones(
+        center: NSPoint,
+        radius: CGFloat,
+        startAngle: CGFloat,
+        sweep: CGFloat,
+        lineWidth: CGFloat
+    ) {
+        drawGaugeArc(
+            center: center,
+            radius: radius,
+            startAngle: startAngle,
+            endAngle: startAngle - sweep * 0.30,
+            lineWidth: lineWidth,
+            color: NSColor.systemRed.withAlphaComponent(0.46)
+        )
+        drawGaugeArc(
+            center: center,
+            radius: radius,
+            startAngle: startAngle - sweep * 0.30,
+            endAngle: startAngle - sweep * 0.60,
+            lineWidth: lineWidth,
+            color: NSColor.systemOrange.withAlphaComponent(0.50)
+        )
+        drawGaugeArc(
+            center: center,
+            radius: radius,
+            startAngle: startAngle - sweep * 0.60,
+            endAngle: startAngle - sweep,
+            lineWidth: lineWidth,
+            color: NSColor.systemGreen.withAlphaComponent(0.52)
+        )
+    }
+
+    private static func drawGaugeArc(
+        center: NSPoint,
+        radius: CGFloat,
+        startAngle: CGFloat,
+        endAngle: CGFloat,
+        lineWidth: CGFloat,
+        color: NSColor
+    ) {
+        let arc = NSBezierPath()
+        arc.lineCapStyle = .round
+        arc.lineWidth = lineWidth
+        arc.appendArc(
+            withCenter: center,
+            radius: radius,
+            startAngle: startAngle,
+            endAngle: endAngle,
+            clockwise: true
+        )
+        color.setStroke()
+        arc.stroke()
     }
 
     private static func percentText(for line: CodexUsageMenuLine) -> String {
@@ -458,17 +530,6 @@ private enum StatusTitleImageRenderer {
             return .systemOrange
         default:
             return .systemRed
-        }
-    }
-
-    private static func gaugeNeedleColor(for state: State) -> NSColor {
-        switch state {
-        case .refreshing:
-            return NSColor.systemBlue.withAlphaComponent(0.85)
-        case .error:
-            return NSColor.systemRed.withAlphaComponent(0.8)
-        case .normal:
-            return NSColor.labelColor.withAlphaComponent(0.68)
         }
     }
 

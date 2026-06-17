@@ -218,7 +218,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 private enum StatusTitleImageRenderer {
-    enum State {
+    enum State: Equatable {
         case normal
         case refreshing
         case error
@@ -228,8 +228,6 @@ private enum StatusTitleImageRenderer {
         let height: CGFloat
         let rowHeight: CGFloat
         let paddingX: CGFloat
-        let petSize: CGFloat
-        let petGap: CGFloat
         let labelGap: CGFloat
         let barGap: CGFloat
         let valueGap: CGFloat
@@ -244,13 +242,11 @@ private enum StatusTitleImageRenderer {
                 height = 18
                 rowHeight = 18
                 paddingX = 3
-                petSize = 14
-                petGap = 5
-                labelGap = 4
+                labelGap = 5
                 barGap = 5
                 valueGap = 5
-                barWidth = 46
-                barHeight = 7
+                barWidth = 56
+                barHeight = 10
                 labelFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
                 resetFont = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .medium)
@@ -258,13 +254,11 @@ private enum StatusTitleImageRenderer {
                 height = 22
                 rowHeight = 10
                 paddingX = 3
-                petSize = 13
-                petGap = 4
                 labelGap = 3
                 barGap = 4
                 valueGap = 4
-                barWidth = 34
-                barHeight = 5
+                barWidth = 42
+                barHeight = 7
                 labelFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
                 resetFont = NSFont.monospacedSystemFont(ofSize: 8.5, weight: .medium)
@@ -290,27 +284,16 @@ private enum StatusTitleImageRenderer {
             + valueWidth
             + resetGap
             + resetWidth
-        let width = ceil(metrics.paddingX * 2 + metrics.petSize + metrics.petGap + contentWidth)
+        let width = ceil(metrics.paddingX * 2 + contentWidth)
         let image = NSImage(size: NSSize(width: width, height: metrics.height))
 
         image.lockFocus()
         NSColor.clear.setFill()
         NSRect(origin: .zero, size: image.size).fill()
 
-        let currentPercent = lines.first?.remainingPercent
-        let petColor = petColor(for: currentPercent, state: state)
-        let mood = petMood(for: currentPercent, state: state)
-        let petRect = NSRect(
-            x: metrics.paddingX,
-            y: floor((metrics.height - metrics.petSize) / 2),
-            width: metrics.petSize,
-            height: metrics.petSize
-        )
-        drawPet(in: petRect, color: petColor, mood: mood)
-
         for (index, line) in lines.enumerated() {
             let rowRect = rowRect(for: index, lineCount: lines.count, metrics: metrics, width: width)
-            var x = metrics.paddingX + metrics.petSize + metrics.petGap
+            var x = metrics.paddingX
 
             drawText(line.label, atX: x, in: rowRect, attributes: labelAttributes)
             x += labelWidth + metrics.labelGap
@@ -321,7 +304,7 @@ private enum StatusTitleImageRenderer {
                 width: metrics.barWidth,
                 height: metrics.barHeight
             )
-            drawBar(in: barRect, percent: line.remainingPercent)
+            drawBattery(in: barRect, percent: line.remainingPercent, state: state)
             x += metrics.barWidth + metrics.barGap
 
             drawText(percentText(for: line), atX: x, in: rowRect, attributes: valueAttributes)
@@ -377,11 +360,34 @@ private enum StatusTitleImageRenderer {
         )
     }
 
-    private static func drawBar(in rect: NSRect, percent: Int?) {
-        let radius = rect.height / 2
-        let track = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
-        NSColor.labelColor.withAlphaComponent(0.16).setFill()
-        track.fill()
+    private static func drawBattery(in rect: NSRect, percent: Int?, state: State) {
+        let capWidth = max(2.5, floor(rect.height * 0.28))
+        let capGap: CGFloat = 1
+        let bodyRect = NSRect(
+            x: rect.minX,
+            y: rect.minY,
+            width: rect.width - capWidth - capGap,
+            height: rect.height
+        )
+        let capHeight = max(3, floor(rect.height * 0.52))
+        let capRect = NSRect(
+            x: bodyRect.maxX + capGap,
+            y: floor(bodyRect.midY - capHeight / 2),
+            width: capWidth,
+            height: capHeight
+        )
+        let radius = min(3, bodyRect.height * 0.28)
+        let bodyPath = NSBezierPath(roundedRect: bodyRect, xRadius: radius, yRadius: radius)
+        let borderColor = batteryBorderColor(for: state)
+
+        NSColor.labelColor.withAlphaComponent(0.08).setFill()
+        bodyPath.fill()
+        borderColor.setStroke()
+        bodyPath.lineWidth = 1.1
+        bodyPath.stroke()
+
+        borderColor.setFill()
+        NSBezierPath(roundedRect: capRect, xRadius: capWidth / 2, yRadius: capWidth / 2).fill()
 
         guard let percent else {
             return
@@ -392,80 +398,22 @@ private enum StatusTitleImageRenderer {
             return
         }
 
+        let innerRect = bodyRect.insetBy(dx: 2, dy: 2)
+        let innerPath = NSBezierPath(
+            roundedRect: innerRect,
+            xRadius: max(1, innerRect.height / 2),
+            yRadius: max(1, innerRect.height / 2)
+        )
         NSGraphicsContext.saveGraphicsState()
-        track.addClip()
-        progressColor(for: percent).setFill()
-        NSRect(x: rect.minX, y: rect.minY, width: rect.width * fraction, height: rect.height).fill()
+        innerPath.addClip()
+        progressColor(for: percent, state: state).setFill()
+        NSRect(
+            x: innerRect.minX,
+            y: innerRect.minY,
+            width: innerRect.width * fraction,
+            height: innerRect.height
+        ).fill()
         NSGraphicsContext.restoreGraphicsState()
-    }
-
-    private static func drawPet(in rect: NSRect, color: NSColor, mood: PetMood) {
-        color.setFill()
-        NSBezierPath(roundedRect: rect, xRadius: rect.width * 0.38, yRadius: rect.height * 0.38).fill()
-
-        color.blended(withFraction: 0.18, of: .white)?.setFill()
-        NSBezierPath(
-            roundedRect: NSRect(
-                x: rect.minX + rect.width * 0.56,
-                y: rect.minY + rect.height * 0.66,
-                width: rect.width * 0.24,
-                height: rect.height * 0.14
-            ),
-            xRadius: rect.height * 0.06,
-            yRadius: rect.height * 0.06
-        ).fill()
-
-        NSColor.white.withAlphaComponent(0.95).setStroke()
-        NSColor.white.withAlphaComponent(0.95).setFill()
-
-        switch mood {
-        case .normal, .warning, .loading:
-            drawEye(center: NSPoint(x: rect.minX + rect.width * 0.35, y: rect.minY + rect.height * 0.58), in: rect)
-            drawEye(center: NSPoint(x: rect.minX + rect.width * 0.65, y: rect.minY + rect.height * 0.58), in: rect)
-        case .low:
-            drawEye(center: NSPoint(x: rect.minX + rect.width * 0.36, y: rect.minY + rect.height * 0.58), in: rect)
-            drawEye(center: NSPoint(x: rect.minX + rect.width * 0.64, y: rect.minY + rect.height * 0.58), in: rect)
-        case .error:
-            drawXEye(center: NSPoint(x: rect.minX + rect.width * 0.36, y: rect.minY + rect.height * 0.58), in: rect)
-            drawXEye(center: NSPoint(x: rect.minX + rect.width * 0.64, y: rect.minY + rect.height * 0.58), in: rect)
-        }
-
-        let mouth = NSBezierPath()
-        mouth.lineWidth = max(1, rect.width * 0.08)
-        switch mood {
-        case .normal, .loading:
-            mouth.move(to: NSPoint(x: rect.minX + rect.width * 0.34, y: rect.minY + rect.height * 0.36))
-            mouth.curve(
-                to: NSPoint(x: rect.minX + rect.width * 0.66, y: rect.minY + rect.height * 0.36),
-                controlPoint1: NSPoint(x: rect.minX + rect.width * 0.43, y: rect.minY + rect.height * 0.22),
-                controlPoint2: NSPoint(x: rect.minX + rect.width * 0.57, y: rect.minY + rect.height * 0.22)
-            )
-        case .warning:
-            mouth.move(to: NSPoint(x: rect.minX + rect.width * 0.38, y: rect.minY + rect.height * 0.34))
-            mouth.line(to: NSPoint(x: rect.minX + rect.width * 0.62, y: rect.minY + rect.height * 0.34))
-        case .low, .error:
-            mouth.move(to: NSPoint(x: rect.minX + rect.width * 0.38, y: rect.minY + rect.height * 0.34))
-            mouth.line(to: NSPoint(x: rect.minX + rect.width * 0.62, y: rect.minY + rect.height * 0.34))
-        }
-        mouth.stroke()
-    }
-
-    private static func drawEye(center: NSPoint, in rect: NSRect) {
-        let size = max(1.7, rect.width * 0.13)
-        NSBezierPath(
-            ovalIn: NSRect(x: center.x - size / 2, y: center.y - size / 2, width: size, height: size)
-        ).fill()
-    }
-
-    private static func drawXEye(center: NSPoint, in rect: NSRect) {
-        let size = max(2, rect.width * 0.14)
-        let path = NSBezierPath()
-        path.lineWidth = max(0.8, rect.width * 0.06)
-        path.move(to: NSPoint(x: center.x - size / 2, y: center.y - size / 2))
-        path.line(to: NSPoint(x: center.x + size / 2, y: center.y + size / 2))
-        path.move(to: NSPoint(x: center.x - size / 2, y: center.y + size / 2))
-        path.line(to: NSPoint(x: center.x + size / 2, y: center.y - size / 2))
-        path.stroke()
     }
 
     private static func percentText(for line: CodexUsageMenuLine) -> String {
@@ -490,7 +438,15 @@ private enum StatusTitleImageRenderer {
         ]
     }
 
-    private static func progressColor(for percent: Int) -> NSColor {
+    private static func progressColor(for percent: Int, state: State) -> NSColor {
+        if state == .refreshing {
+            return .systemBlue
+        }
+
+        if state == .error {
+            return .systemRed
+        }
+
         switch percent {
         case 60...:
             return .systemGreen
@@ -501,49 +457,14 @@ private enum StatusTitleImageRenderer {
         }
     }
 
-    private static func petColor(for percent: Int?, state: State) -> NSColor {
+    private static func batteryBorderColor(for state: State) -> NSColor {
         switch state {
         case .refreshing:
-            return .systemBlue
+            return NSColor.systemBlue.withAlphaComponent(0.75)
         case .error:
-            return .systemRed
+            return NSColor.systemRed.withAlphaComponent(0.8)
         case .normal:
-            guard let percent else {
-                return .systemGray
-            }
-
-            return progressColor(for: percent)
-        }
-    }
-
-    private enum PetMood {
-        case normal
-        case warning
-        case low
-        case loading
-        case error
-    }
-
-    private static func petMood(for percent: Int?, state: State) -> PetMood {
-        switch state {
-        case .refreshing:
-            return .loading
-        case .error:
-            return .error
-        case .normal:
-            guard let percent else {
-                return .warning
-            }
-
-            if percent < 25 {
-                return .low
-            }
-
-            if percent < 60 {
-                return .warning
-            }
-
-            return .normal
+            return NSColor.labelColor.withAlphaComponent(0.55)
         }
     }
 }

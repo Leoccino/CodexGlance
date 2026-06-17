@@ -17,7 +17,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Package app
-        run: ./Scripts/package-release.sh
+        run: |
+          CODEXGLANCE_VERSION="${GITHUB_REF_NAME#v}" ./Scripts/package-release.sh
 
       - name: Create GitHub release
         env:

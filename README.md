@@ -15,7 +15,7 @@ CodexGlance is a tiny macOS menu bar app for people who just want to know one th
 - `5h` is the current 5-hour Codex usage window.
 - `wk` is the optional weekly Codex usage window.
 - Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
-- The colored battery is continuous, so 88% looks close to full instead of being rounded into coarse blocks.
+- The colored usage meter is continuous, so 88% looks close to full instead of being rounded into coarse blocks.
 - The time at the end is the reset countdown for that usage window.
 
 It is intentionally narrow:

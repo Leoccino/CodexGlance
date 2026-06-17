@@ -304,7 +304,7 @@ private enum StatusTitleImageRenderer {
                 width: metrics.barWidth,
                 height: metrics.barHeight
             )
-            drawBattery(in: barRect, percent: line.remainingPercent, state: state)
+            drawUsageMeter(in: barRect, percent: line.remainingPercent, state: state)
             x += metrics.barWidth + metrics.barGap
 
             drawText(percentText(for: line), atX: x, in: rowRect, attributes: valueAttributes)
@@ -360,45 +360,29 @@ private enum StatusTitleImageRenderer {
         )
     }
 
-    private static func drawBattery(in rect: NSRect, percent: Int?, state: State) {
-        let capWidth = max(2.5, floor(rect.height * 0.28))
-        let capGap: CGFloat = 1
-        let bodyRect = NSRect(
-            x: rect.minX,
-            y: rect.minY,
-            width: rect.width - capWidth - capGap,
-            height: rect.height
-        )
-        let capHeight = max(3, floor(rect.height * 0.52))
-        let capRect = NSRect(
-            x: bodyRect.maxX + capGap,
-            y: floor(bodyRect.midY - capHeight / 2),
-            width: capWidth,
-            height: capHeight
-        )
-        let radius = min(3, bodyRect.height * 0.28)
-        let bodyPath = NSBezierPath(roundedRect: bodyRect, xRadius: radius, yRadius: radius)
-        let borderColor = batteryBorderColor(for: state)
+    private static func drawUsageMeter(in rect: NSRect, percent: Int?, state: State) {
+        let radius = min(4, rect.height * 0.36)
+        let borderColor = meterBorderColor(for: state)
+        let shellPath = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
 
         NSColor.labelColor.withAlphaComponent(0.08).setFill()
-        bodyPath.fill()
+        shellPath.fill()
         borderColor.setStroke()
-        bodyPath.lineWidth = 1.1
-        bodyPath.stroke()
-
-        borderColor.setFill()
-        NSBezierPath(roundedRect: capRect, xRadius: capWidth / 2, yRadius: capWidth / 2).fill()
+        shellPath.lineWidth = 1.1
+        shellPath.stroke()
 
         guard let percent else {
+            drawMeterTicks(in: rect, color: borderColor)
             return
         }
 
         let fraction = min(1, max(0, CGFloat(percent) / 100))
         guard fraction > 0 else {
+            drawMeterTicks(in: rect, color: borderColor)
             return
         }
 
-        let innerRect = bodyRect.insetBy(dx: 2, dy: 2)
+        let innerRect = rect.insetBy(dx: 2, dy: 2)
         let innerPath = NSBezierPath(
             roundedRect: innerRect,
             xRadius: max(1, innerRect.height / 2),
@@ -414,6 +398,23 @@ private enum StatusTitleImageRenderer {
             height: innerRect.height
         ).fill()
         NSGraphicsContext.restoreGraphicsState()
+
+        drawMeterTicks(in: rect, color: borderColor)
+    }
+
+    private static func drawMeterTicks(in rect: NSRect, color: NSColor) {
+        let innerRect = rect.insetBy(dx: 2, dy: 2)
+        let tickColor = color.withAlphaComponent(0.28)
+        tickColor.setStroke()
+
+        for fraction in [0.25, 0.5, 0.75] as [CGFloat] {
+            let x = floor(innerRect.minX + innerRect.width * fraction) + 0.5
+            let path = NSBezierPath()
+            path.lineWidth = 0.8
+            path.move(to: NSPoint(x: x, y: innerRect.minY + 1))
+            path.line(to: NSPoint(x: x, y: innerRect.maxY - 1))
+            path.stroke()
+        }
     }
 
     private static func percentText(for line: CodexUsageMenuLine) -> String {
@@ -457,7 +458,7 @@ private enum StatusTitleImageRenderer {
         }
     }
 
-    private static func batteryBorderColor(for state: State) -> NSColor {
+    private static func meterBorderColor(for state: State) -> NSColor {
         switch state {
         case .refreshing:
             return NSColor.systemBlue.withAlphaComponent(0.75)

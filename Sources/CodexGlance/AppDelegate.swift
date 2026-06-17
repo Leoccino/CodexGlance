@@ -229,10 +229,9 @@ private enum StatusTitleImageRenderer {
         let rowHeight: CGFloat
         let paddingX: CGFloat
         let labelGap: CGFloat
-        let barGap: CGFloat
+        let gaugeGap: CGFloat
         let valueGap: CGFloat
-        let barWidth: CGFloat
-        let barHeight: CGFloat
+        let gaugeSize: CGFloat
         let labelFont: NSFont
         let valueFont: NSFont
         let resetFont: NSFont
@@ -243,10 +242,9 @@ private enum StatusTitleImageRenderer {
                 rowHeight = 18
                 paddingX = 3
                 labelGap = 5
-                barGap = 5
+                gaugeGap = 5
                 valueGap = 5
-                barWidth = 56
-                barHeight = 10
+                gaugeSize = 15
                 labelFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
                 resetFont = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .medium)
@@ -255,10 +253,9 @@ private enum StatusTitleImageRenderer {
                 rowHeight = 10
                 paddingX = 3
                 labelGap = 3
-                barGap = 4
+                gaugeGap = 4
                 valueGap = 4
-                barWidth = 42
-                barHeight = 7
+                gaugeSize = 9
                 labelFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
                 resetFont = NSFont.monospacedSystemFont(ofSize: 8.5, weight: .medium)
@@ -279,8 +276,8 @@ private enum StatusTitleImageRenderer {
         let resetGap = resetWidth > 0 ? metrics.valueGap : 0
         let contentWidth = labelWidth
             + metrics.labelGap
-            + metrics.barWidth
-            + metrics.barGap
+            + metrics.gaugeSize
+            + metrics.gaugeGap
             + valueWidth
             + resetGap
             + resetWidth
@@ -298,14 +295,14 @@ private enum StatusTitleImageRenderer {
             drawText(line.label, atX: x, in: rowRect, attributes: labelAttributes)
             x += labelWidth + metrics.labelGap
 
-            let barRect = NSRect(
+            let gaugeRect = NSRect(
                 x: x,
-                y: floor(rowRect.midY - metrics.barHeight / 2),
-                width: metrics.barWidth,
-                height: metrics.barHeight
+                y: floor(rowRect.midY - metrics.gaugeSize / 2),
+                width: metrics.gaugeSize,
+                height: metrics.gaugeSize
             )
-            drawUsageMeter(in: barRect, percent: line.remainingPercent, state: state)
-            x += metrics.barWidth + metrics.barGap
+            drawGauge(in: gaugeRect, percent: line.remainingPercent, state: state)
+            x += metrics.gaugeSize + metrics.gaugeGap
 
             drawText(percentText(for: line), atX: x, in: rowRect, attributes: valueAttributes)
             x += valueWidth
@@ -360,61 +357,67 @@ private enum StatusTitleImageRenderer {
         )
     }
 
-    private static func drawUsageMeter(in rect: NSRect, percent: Int?, state: State) {
-        let radius = min(4, rect.height * 0.36)
-        let borderColor = meterBorderColor(for: state)
-        let shellPath = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+    private static func drawGauge(in rect: NSRect, percent: Int?, state: State) {
+        let center = NSPoint(x: rect.midX, y: rect.minY + rect.height * 0.48)
+        let radius = rect.width * 0.42
+        let startAngle: CGFloat = 210
+        let sweep: CGFloat = 240
+        let endAngle = startAngle - sweep
+        let lineWidth = max(1.4, rect.width * 0.16)
+        let fraction = min(1, max(0, CGFloat(percent ?? 0) / 100))
 
-        NSColor.labelColor.withAlphaComponent(0.08).setFill()
-        shellPath.fill()
-        borderColor.setStroke()
-        shellPath.lineWidth = 1.1
-        shellPath.stroke()
-
-        guard let percent else {
-            drawMeterTicks(in: rect, color: borderColor)
-            return
-        }
-
-        let fraction = min(1, max(0, CGFloat(percent) / 100))
-        guard fraction > 0 else {
-            drawMeterTicks(in: rect, color: borderColor)
-            return
-        }
-
-        let innerRect = rect.insetBy(dx: 2, dy: 2)
-        let innerPath = NSBezierPath(
-            roundedRect: innerRect,
-            xRadius: max(1, innerRect.height / 2),
-            yRadius: max(1, innerRect.height / 2)
+        let track = NSBezierPath()
+        track.lineCapStyle = .round
+        track.lineWidth = lineWidth
+        track.appendArc(
+            withCenter: center,
+            radius: radius,
+            startAngle: startAngle,
+            endAngle: endAngle,
+            clockwise: true
         )
-        NSGraphicsContext.saveGraphicsState()
-        innerPath.addClip()
-        progressColor(for: percent, state: state).setFill()
-        NSRect(
-            x: innerRect.minX,
-            y: innerRect.minY,
-            width: innerRect.width * fraction,
-            height: innerRect.height
-        ).fill()
-        NSGraphicsContext.restoreGraphicsState()
+        NSColor.labelColor.withAlphaComponent(0.18).setStroke()
+        track.stroke()
 
-        drawMeterTicks(in: rect, color: borderColor)
-    }
-
-    private static func drawMeterTicks(in rect: NSRect, color: NSColor) {
-        let innerRect = rect.insetBy(dx: 2, dy: 2)
-        let tickColor = color.withAlphaComponent(0.28)
-        tickColor.setStroke()
-
-        for fraction in [0.25, 0.5, 0.75] as [CGFloat] {
-            let x = floor(innerRect.minX + innerRect.width * fraction) + 0.5
-            let path = NSBezierPath()
-            path.lineWidth = 0.8
-            path.move(to: NSPoint(x: x, y: innerRect.minY + 1))
-            path.line(to: NSPoint(x: x, y: innerRect.maxY - 1))
-            path.stroke()
+        if percent != nil, fraction > 0 {
+            let progress = NSBezierPath()
+            progress.lineCapStyle = .round
+            progress.lineWidth = lineWidth
+            progress.appendArc(
+                withCenter: center,
+                radius: radius,
+                startAngle: startAngle,
+                endAngle: startAngle - sweep * fraction,
+                clockwise: true
+            )
+            progressColor(for: percent ?? 0, state: state).setStroke()
+            progress.stroke()
         }
+
+        let needleAngle = startAngle - sweep * fraction
+        let needleEnd = point(
+            from: center,
+            radius: radius * 0.68,
+            angleDegrees: needleAngle
+        )
+        let needle = NSBezierPath()
+        needle.lineCapStyle = .round
+        needle.lineWidth = max(0.8, rect.width * 0.07)
+        needle.move(to: center)
+        needle.line(to: needleEnd)
+        gaugeNeedleColor(for: state).setStroke()
+        needle.stroke()
+
+        let dotSize = max(2, rect.width * 0.18)
+        gaugeNeedleColor(for: state).setFill()
+        NSBezierPath(
+            ovalIn: NSRect(
+                x: center.x - dotSize / 2,
+                y: center.y - dotSize / 2,
+                width: dotSize,
+                height: dotSize
+            )
+        ).fill()
     }
 
     private static func percentText(for line: CodexUsageMenuLine) -> String {
@@ -458,14 +461,26 @@ private enum StatusTitleImageRenderer {
         }
     }
 
-    private static func meterBorderColor(for state: State) -> NSColor {
+    private static func gaugeNeedleColor(for state: State) -> NSColor {
         switch state {
         case .refreshing:
-            return NSColor.systemBlue.withAlphaComponent(0.75)
+            return NSColor.systemBlue.withAlphaComponent(0.85)
         case .error:
             return NSColor.systemRed.withAlphaComponent(0.8)
         case .normal:
-            return NSColor.labelColor.withAlphaComponent(0.55)
+            return NSColor.labelColor.withAlphaComponent(0.68)
         }
+    }
+
+    private static func point(
+        from center: NSPoint,
+        radius: CGFloat,
+        angleDegrees: CGFloat
+    ) -> NSPoint {
+        let radians = angleDegrees * .pi / 180
+        return NSPoint(
+            x: center.x + cos(radians) * radius,
+            y: center.y + sin(radians) * radius
+        )
     }
 }

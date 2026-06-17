@@ -11,10 +11,10 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▱▱▱ 32%\nwk ▰▰▰▱▱ 59%")
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h 32%\nwk 59%")
     }
 
-    func testMenuTitleBarMatchesCompactExamples() {
+    func testMenuTitleMatchesCompactExamples() {
         let snapshot = CodexUsageSnapshot(
             current: RateWindow(usedPercent: 32, windowMinutes: 300, resetsAt: nil),
             weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: nil),
@@ -23,7 +23,7 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▰▰▱ 68%\nwk ▰▰▱▱▱ 41%")
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h 68%\nwk 41%")
     }
 
     func testMenuTitleCanHideWeeklyUsage() {
@@ -35,7 +35,23 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: false), "5h ▰▰▰▰▱ 68%")
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: false), "5h 68%")
+    }
+
+    func testMenuTitleIncludesCompactResetTimes() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let snapshot = CodexUsageSnapshot(
+            current: RateWindow(usedPercent: 12, windowMinutes: 300, resetsAt: now.addingTimeInterval(8_640)),
+            weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: now.addingTimeInterval(111_600)),
+            credits: nil,
+            identity: nil,
+            updatedAt: now
+        )
+
+        XCTAssertEqual(
+            CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: true, now: now),
+            "5h 88% 2h24m\nwk 41% 1d7h"
+        )
     }
 
     func testMapperDecodesRPCShape() throws {

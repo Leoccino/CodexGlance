@@ -1,22 +1,49 @@
 import Foundation
 
 public enum CodexUsageDisplayFormatter {
-    public static func menuTitle(for snapshot: CodexUsageSnapshot?, includeWeekly: Bool = true) -> String {
+    public static func menuTitle(
+        for snapshot: CodexUsageSnapshot?,
+        includeWeekly: Bool = true,
+        now: Date = Date()
+    ) -> String {
+        menuLines(for: snapshot, includeWeekly: includeWeekly, now: now)
+            .map(titleLine)
+            .joined(separator: "\n")
+    }
+
+    public static func menuLines(
+        for snapshot: CodexUsageSnapshot?,
+        includeWeekly: Bool = true,
+        now: Date = Date()
+    ) -> [CodexUsageMenuLine] {
         guard let snapshot else {
-            return includeWeekly ? "5h --%\nwk --%" : "5h --%"
+            return placeholderLines(includeWeekly: includeWeekly)
         }
 
-        let current = "5h \(bar(snapshot.current)) \(percentage(snapshot.current))%"
-        guard includeWeekly else {
-            return current
+        var lines = [
+            CodexUsageMenuLine(
+                label: "5h",
+                remainingPercent: remainingPercentage(snapshot.current),
+                resetText: compactResetDescription(for: snapshot.current, now: now)
+            )
+        ]
+
+        if includeWeekly {
+            lines.append(
+                CodexUsageMenuLine(
+                    label: "wk",
+                    remainingPercent: remainingPercentage(snapshot.weekly),
+                    resetText: compactResetDescription(for: snapshot.weekly, now: now)
+                )
+            )
         }
 
-        return "\(current)\nwk \(bar(snapshot.weekly)) \(percentage(snapshot.weekly))%"
+        return lines
     }
 
     public static func display(for snapshot: CodexUsageSnapshot, includeWeekly: Bool = true, now: Date = Date()) -> CodexUsageDisplay {
         CodexUsageDisplay(
-            title: menuTitle(for: snapshot, includeWeekly: includeWeekly),
+            title: menuTitle(for: snapshot, includeWeekly: includeWeekly, now: now),
             currentLine: "5h: \(windowDescription(snapshot.current, now: now))",
             weeklyLine: "wk: \(windowDescription(snapshot.weekly, now: now))",
             creditsLine: creditsDescription(snapshot.credits),
@@ -29,22 +56,33 @@ public enum CodexUsageDisplayFormatter {
         includeWeekly ? "5h --%\nwk --%" : "5h --%"
     }
 
-    private static func percentage(_ window: RateWindow?) -> String {
-        guard let window else {
-            return "--"
+    private static func placeholderLines(includeWeekly: Bool) -> [CodexUsageMenuLine] {
+        var lines = [
+            CodexUsageMenuLine(label: "5h", remainingPercent: nil, resetText: nil)
+        ]
+
+        if includeWeekly {
+            lines.append(CodexUsageMenuLine(label: "wk", remainingPercent: nil, resetText: nil))
         }
 
-        return "\(Int(window.remainingPercent.rounded()))"
+        return lines
     }
 
-    private static func bar(_ window: RateWindow?) -> String {
-        guard let window else {
-            return "▱▱▱▱▱"
+    private static func titleLine(_ line: CodexUsageMenuLine) -> String {
+        let percentage = line.remainingPercent.map { "\($0)%" } ?? "--%"
+        guard let resetText = line.resetText, !resetText.isEmpty else {
+            return "\(line.label) \(percentage)"
         }
 
-        let percent = Int(window.remainingPercent.rounded())
-        let filled = min(5, max(0, (percent + 15) / 20))
-        return String(repeating: "▰", count: filled) + String(repeating: "▱", count: 5 - filled)
+        return "\(line.label) \(percentage) \(resetText)"
+    }
+
+    private static func remainingPercentage(_ window: RateWindow?) -> Int? {
+        guard let window else {
+            return nil
+        }
+
+        return Int(window.remainingPercent.rounded())
     }
 
     private static func windowDescription(_ window: RateWindow?, now: Date) -> String {
@@ -53,7 +91,32 @@ public enum CodexUsageDisplayFormatter {
         }
 
         let reset = resetDescription(for: window, now: now)
-        return "\(bar(window)) \(Int(window.remainingPercent.rounded()))% remaining\(reset)"
+        return "\(Int(window.remainingPercent.rounded()))% remaining\(reset)"
+    }
+
+    private static func compactResetDescription(for window: RateWindow?, now: Date) -> String? {
+        guard let resetsAt = window?.resetsAt else {
+            return nil
+        }
+
+        let seconds = max(0, Int(resetsAt.timeIntervalSince(now)))
+        if seconds == 0 {
+            return "now"
+        }
+
+        let days = seconds / 86_400
+        let hours = (seconds % 86_400) / 3_600
+        let minutes = (seconds % 3_600) / 60
+
+        if days > 0 {
+            return "\(days)d\(hours)h"
+        }
+
+        if hours > 0 {
+            return "\(hours)h\(minutes)m"
+        }
+
+        return "\(minutes)m"
     }
 
     private static func resetDescription(for window: RateWindow, now: Date) -> String {

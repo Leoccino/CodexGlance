@@ -92,3 +92,15 @@ public struct CodexUsageDisplay: Equatable {
         self.updatedLine = updatedLine
     }
 }
+
+public struct CodexUsageMenuLine: Equatable {
+    public let label: String
+    public let remainingPercent: Int?
+    public let resetText: String?
+
+    public init(label: String, remainingPercent: Int?, resetText: String?) {
+        self.label = label
+        self.remainingPercent = remainingPercent
+        self.resetText = resetText
+    }
+}

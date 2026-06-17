@@ -9,12 +9,14 @@
 CodexGlance is a tiny macOS menu bar app for people who just want to know one thing: how much Codex usage is left.
 
 ```text
-5h ▰▰▰▰▱ 68%
+pet  5h [████████▊ ] 88% 2h14m
 ```
 
 - `5h` is the current 5-hour Codex usage window.
 - `wk` is the optional weekly Codex usage window.
 - Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
+- The colored bar is continuous, so 88% looks close to full instead of being rounded into coarse blocks.
+- The time at the end is the reset countdown for that usage window.
 
 It is intentionally narrow:
 
@@ -22,7 +24,7 @@ It is intentionally narrow:
 - Menu bar only.
 - One glance first; details on click.
 
-Click the menu bar item to see reset times, account, credits, and a manual refresh command.
+Click the menu bar item to see account, credits, the last data update time, and a manual refresh command.
 Weekly usage is hidden by default and can be added from the menu when you need it.
 
 ## Privacy

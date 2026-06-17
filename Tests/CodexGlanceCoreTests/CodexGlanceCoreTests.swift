@@ -2,7 +2,7 @@ import XCTest
 @testable import CodexGlanceCore
 
 final class CodexGlanceCoreTests: XCTestCase {
-    func testMenuTitleUsesCurrentAndWeeklyPercentages() {
+    func testMenuTitleUsesCurrentAndWeeklyRemainingPercentages() {
         let snapshot = CodexUsageSnapshot(
             current: RateWindow(usedPercent: 68.2, windowMinutes: 300, resetsAt: nil),
             weekly: RateWindow(usedPercent: 40.6, windowMinutes: 10_080, resetsAt: nil),
@@ -11,7 +11,7 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "C68 W41")
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "C32 W59")
     }
 
     func testMapperDecodesRPCShape() throws {

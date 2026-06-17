@@ -10,7 +10,7 @@ C68 W41
 
 - `C` is the current 5-hour Codex usage window.
 - `W` is the weekly Codex usage window.
-- Numbers are used percentages, rounded to whole numbers.
+- Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
 
 Click the menu bar item to see reset times, credits, account, and a manual refresh command.
 

@@ -29,7 +29,7 @@ public enum CodexUsageDisplayFormatter {
             return "--"
         }
 
-        return "\(window.roundedUsedPercent)"
+        return "\(Int(window.remainingPercent.rounded()))"
     }
 
     private static func windowDescription(_ window: RateWindow?, now: Date) -> String {
@@ -38,7 +38,7 @@ public enum CodexUsageDisplayFormatter {
         }
 
         let reset = resetDescription(for: window, now: now)
-        return "\(window.roundedUsedPercent)% used\(reset)"
+        return "\(Int(window.remainingPercent.rounded()))% remaining\(reset)"
     }
 
     private static func resetDescription(for window: RateWindow, now: Date) -> String {

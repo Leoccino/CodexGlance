@@ -25,7 +25,20 @@ Weekly usage is hidden by default and can be added from the menu when you need i
 
 CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to any third-party service.
 
-## Run
+## Download
+
+Download `CodexGlance.app.zip` from the latest [GitHub release](https://github.com/Leoccino/CodexGlance/releases), unzip it, and open `CodexGlance.app`.
+
+Because the app is currently unsigned, macOS may require right-clicking the app and choosing `Open` the first time.
+
+Requirements:
+
+- macOS 13 or newer.
+- Codex installed and signed in locally.
+
+Weekly usage is hidden by default. Click the menu bar item and enable `Show Weekly in Menu Bar` when you want it.
+
+## Build From Source
 
 Clone, build, and launch:
 
@@ -35,13 +48,6 @@ cd CodexGlance
 ./Scripts/package-app.sh
 open .build/CodexGlance.app
 ```
-
-Requirements:
-
-- macOS 13 or newer.
-- Codex installed and signed in locally.
-
-Weekly usage is hidden by default. Click the menu bar item and enable `Show Weekly in Menu Bar` when you want it.
 
 For development, you can run it directly:
 
@@ -60,6 +66,12 @@ If SwiftPM cannot find the active macOS SDK, use the direct build script:
 ```sh
 ./Scripts/build.sh
 .build/manual/CodexGlance
+```
+
+Create a release zip locally:
+
+```sh
+./Scripts/package-release.sh
 ```
 
 One-shot terminal check with the direct build:

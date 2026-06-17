@@ -21,6 +21,10 @@ CodexGlance is a tiny macOS menu bar app for people who just want to know one th
 
 CodexGlance uses two small visual cues:
 
+<p align="center">
+  <img src="Assets/visual-design.svg" alt="CodexGlance visual design: usage gauge and reset countdown line">
+</p>
+
 - **Usage gauge:** the mini gauge shows remaining usage. Left is low remaining and red, middle is caution and orange, right is healthy and green. The needle points to the current remaining percentage.
 - **Reset line:** the cool-toned line under `5h` shows time left before the current window resets. A longer line means more time left; a shorter, brighter blue line means the next reset is closer.
 

@@ -1,0 +1,96 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">CodexGlance visual design guide</title>
+  <desc id="desc">A diagram explaining the usage gauge and reset countdown line used in the CodexGlance menu bar item.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <linearGradient id="resetCool" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .card { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1.5; }
+      .title { font: 700 44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .label { font: 700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .body { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .small { font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; }
+      .mono { font: 700 32px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; fill: #111827; }
+      .monoSmall { font: 700 20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; fill: #111827; }
+      .mutedStroke { stroke: #94a3b8; stroke-width: 2; stroke-linecap: round; }
+      .calloutLine { stroke: #64748b; stroke-width: 2; stroke-linecap: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="720"/>
+
+  <text class="title" x="92" y="92">Codex usage, at a glance.</text>
+  <text class="subtitle" x="94" y="128">Two tiny visual cues keep the menu bar compact without hiding meaning.</text>
+
+  <g filter="url(#shadow)">
+    <rect class="card" x="106" y="178" width="1068" height="178" rx="28"/>
+    <rect x="146" y="222" width="988" height="92" rx="24" fill="#f1f5f9" stroke="#dbe3ef" stroke-width="1.5"/>
+
+    <text class="small" x="176" y="254">Menu bar preview</text>
+    <g transform="translate(444 243)">
+      <text class="mono" x="0" y="36">5h</text>
+      <rect x="3" y="47" width="38" height="4" rx="2" fill="#dbeafe"/>
+      <rect x="3" y="47" width="30" height="4" rx="2" fill="url(#resetCool)"/>
+
+      <g transform="translate(88 0)">
+        <path d="M 8 48 C 1 28 8 10 26 3" stroke="#ef4444" stroke-width="5" stroke-linecap="round"/>
+        <path d="M 30 2 C 48 -4 67 2 78 18" stroke="#f97316" stroke-width="5" stroke-linecap="round"/>
+        <path d="M 81 22 C 91 39 86 56 70 67" stroke="#22c55e" stroke-width="5" stroke-linecap="round"/>
+        <line x1="47" y1="42" x2="73" y2="22" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="47" cy="42" r="5" fill="#22c55e"/>
+      </g>
+
+      <text class="mono" x="218" y="36">88%</text>
+    </g>
+  </g>
+
+  <path class="calloutLine" d="M 476 318 C 430 390 356 410 296 446"/>
+  <path class="calloutLine" d="M 586 319 C 604 392 680 404 730 444"/>
+
+  <g filter="url(#shadow)">
+    <rect class="card" x="106" y="454" width="482" height="188" rx="24"/>
+    <text class="label" x="146" y="504">Reset line</text>
+    <text class="body" x="146" y="536">The cool-toned line under 5h counts down</text>
+    <text class="body" x="146" y="562">to the next 5-hour window reset.</text>
+
+    <g transform="translate(146 592)">
+      <text class="monoSmall" x="0" y="20">5h</text>
+      <rect x="1" y="28" width="34" height="5" rx="2.5" fill="#dbeafe"/>
+      <rect x="1" y="28" width="30" height="5" rx="2.5" fill="#67e8f9"/>
+      <text class="small" x="56" y="22">more time left</text>
+    </g>
+    <g transform="translate(338 592)">
+      <text class="monoSmall" x="0" y="20">5h</text>
+      <rect x="1" y="28" width="34" height="5" rx="2.5" fill="#dbeafe"/>
+      <rect x="1" y="28" width="10" height="5" rx="2.5" fill="#2563eb"/>
+      <text class="small" x="56" y="22">reset closer</text>
+    </g>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect class="card" x="692" y="454" width="482" height="188" rx="24"/>
+    <text class="label" x="732" y="504">Usage gauge</text>
+    <text class="body" x="732" y="536">The gauge shows remaining usage, not used</text>
+    <text class="body" x="732" y="562">usage. The needle points to the exact percent.</text>
+
+    <g transform="translate(760 584)">
+      <path d="M 0 40 C -8 12 2 -14 28 -26" stroke="#ef4444" stroke-width="9" stroke-linecap="round"/>
+      <path d="M 36 -29 C 66 -39 94 -28 111 -2" stroke="#f97316" stroke-width="9" stroke-linecap="round"/>
+      <path d="M 117 8 C 132 33 124 60 101 76" stroke="#22c55e" stroke-width="9" stroke-linecap="round"/>
+      <line x1="58" y1="40" x2="106" y2="8" stroke="#22c55e" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="58" cy="40" r="8" fill="#22c55e"/>
+      <text class="small" x="-8" y="98">low</text>
+      <text class="small" x="98" y="98">healthy</text>
+    </g>
+  </g>
+</svg>

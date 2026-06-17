@@ -5,11 +5,11 @@
 CodexGlance is a tiny macOS menu bar app for people who just want to know one thing: how much Codex usage is left.
 
 ```text
-C68 W41
+5h ▰▰▰▰▱ 68%  wk ▰▰▱▱▱ 41%
 ```
 
-- `C` is the current 5-hour Codex usage window.
-- `W` is the weekly Codex usage window.
+- `5h` is the current 5-hour Codex usage window.
+- `wk` is the weekly Codex usage window.
 - Numbers are remaining percentages, rounded to whole numbers. This matches the Codex app's "Usage remaining" panel.
 
 It is intentionally narrow:

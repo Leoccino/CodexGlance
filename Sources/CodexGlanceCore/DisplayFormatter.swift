@@ -3,17 +3,17 @@ import Foundation
 public enum CodexUsageDisplayFormatter {
     public static func menuTitle(for snapshot: CodexUsageSnapshot?) -> String {
         guard let snapshot else {
-            return "C-- W--"
+            return "5h --%  wk --%"
         }
 
-        return "C\(percentage(snapshot.current)) W\(percentage(snapshot.weekly))"
+        return "5h \(bar(snapshot.current)) \(percentage(snapshot.current))%  wk \(bar(snapshot.weekly)) \(percentage(snapshot.weekly))%"
     }
 
     public static func display(for snapshot: CodexUsageSnapshot, now: Date = Date()) -> CodexUsageDisplay {
         CodexUsageDisplay(
             title: menuTitle(for: snapshot),
-            currentLine: "Current: \(windowDescription(snapshot.current, now: now))",
-            weeklyLine: "Weekly: \(windowDescription(snapshot.weekly, now: now))",
+            currentLine: "5h: \(windowDescription(snapshot.current, now: now))",
+            weeklyLine: "wk: \(windowDescription(snapshot.weekly, now: now))",
             creditsLine: creditsDescription(snapshot.credits),
             accountLine: accountDescription(snapshot.identity),
             updatedLine: "Updated: \(timeFormatter.string(from: snapshot.updatedAt))"
@@ -21,7 +21,7 @@ public enum CodexUsageDisplayFormatter {
     }
 
     public static func errorTitle() -> String {
-        "C-- W--"
+        "5h --%  wk --%"
     }
 
     private static func percentage(_ window: RateWindow?) -> String {
@@ -32,13 +32,23 @@ public enum CodexUsageDisplayFormatter {
         return "\(Int(window.remainingPercent.rounded()))"
     }
 
+    private static func bar(_ window: RateWindow?) -> String {
+        guard let window else {
+            return "▱▱▱▱▱"
+        }
+
+        let percent = Int(window.remainingPercent.rounded())
+        let filled = min(5, max(0, (percent + 15) / 20))
+        return String(repeating: "▰", count: filled) + String(repeating: "▱", count: 5 - filled)
+    }
+
     private static func windowDescription(_ window: RateWindow?, now: Date) -> String {
         guard let window else {
             return "unavailable"
         }
 
         let reset = resetDescription(for: window, now: now)
-        return "\(Int(window.remainingPercent.rounded()))% remaining\(reset)"
+        return "\(bar(window)) \(Int(window.remainingPercent.rounded()))% remaining\(reset)"
     }
 
     private static func resetDescription(for window: RateWindow, now: Date) -> String {
@@ -78,9 +88,7 @@ public enum CodexUsageDisplayFormatter {
         }
 
         switch (clean(identity.email), clean(identity.plan)) {
-        case let (email?, plan?):
-            return "Account: \(email) (\(plan))"
-        case let (email?, nil):
+        case let (email?, _):
             return "Account: \(email)"
         case let (nil, plan?):
             return "Plan: \(plan)"

@@ -11,7 +11,19 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "C32 W59")
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▱▱▱ 32%  wk ▰▰▰▱▱ 59%")
+    }
+
+    func testMenuTitleBarMatchesCompactExamples() {
+        let snapshot = CodexUsageSnapshot(
+            current: RateWindow(usedPercent: 32, windowMinutes: 300, resetsAt: nil),
+            weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: nil),
+            credits: nil,
+            identity: nil,
+            updatedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h ▰▰▰▰▱ 68%  wk ▰▰▱▱▱ 41%")
     }
 
     func testMapperDecodesRPCShape() throws {

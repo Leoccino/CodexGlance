@@ -29,6 +29,9 @@ public protocol CodexRPCTransport {
     func shutdown()
 }
 
+public typealias CodexRPCNotificationHandler = ([String: Any]) -> Void
+public typealias CodexRPCDisconnectHandler = (Error?) -> Void
+
 public final class CodexRPCClient: CodexRPCTransport {
     private let process: Process
     private let stdin: Pipe
@@ -36,7 +39,14 @@ public final class CodexRPCClient: CodexRPCTransport {
     private let stderr: Pipe
     private let reader: LineReader
     private let stderrText: TextCollector
+    private let stateLock = NSLock()
+    private let writeLock = NSLock()
+    private let dispatchQueue = DispatchQueue(label: "CodexGlance.CodexRPCClient.dispatch", qos: .utility)
+    private var pending: [Int: PendingCall] = [:]
+    private var notificationHandler: CodexRPCNotificationHandler?
+    private var disconnectHandler: CodexRPCDisconnectHandler?
     private var nextID = 1
+    private var isShutdown = false
 
     public init(
         executablePath: String? = nil,
@@ -78,49 +88,39 @@ public final class CodexRPCClient: CodexRPCTransport {
             stderr.fileHandleForReading.readabilityHandler = nil
             throw CodexRPCError.startFailed(error.localizedDescription)
         }
+
+        startDispatchLoop()
     }
 
     public func initialize(timeout: TimeInterval = 8) throws {
         _ = try call(
             method: "initialize",
-            params: ["clientInfo": ["name": "CodexGlance", "version": "0.1.0"]],
+            params: [
+                "clientInfo": ["name": "CodexGlance", "version": "0.1.0"],
+                "capabilities": ["experimentalApi": true]
+            ],
             timeout: timeout
         )
         try notify(method: "initialized", params: nil)
     }
 
     public func call(method: String, params: [String: Any]? = nil, timeout: TimeInterval = 3) throws -> [String: Any] {
-        let id = nextID
-        nextID += 1
+        let id = nextRequestID()
+        let pendingCall = PendingCall(method: method)
+        setPendingCall(pendingCall, for: id)
 
-        try send(["id": id, "method": method, "params": params ?? [:]])
+        do {
+            try send(["id": id, "method": method, "params": params ?? [:]])
+        } catch {
+            _ = removePendingCall(for: id)
+            throw error
+        }
 
-        let deadline = Date().addingTimeInterval(timeout)
-        while true {
-            let remaining = deadline.timeIntervalSinceNow
-            if remaining <= 0 {
-                throw CodexRPCError.timeout(method)
-            }
-
-            let message = try readMessage(timeout: remaining)
-            if message["id"] == nil {
-                continue
-            }
-
-            guard jsonID(message["id"]) == id else {
-                continue
-            }
-
-            if let error = message["error"] as? [String: Any] {
-                let text = (error["message"] as? String) ?? String(describing: error)
-                throw CodexRPCError.requestFailed(text)
-            }
-
-            guard let result = message["result"] as? [String: Any] else {
-                throw CodexRPCError.malformedResponse("missing result")
-            }
-
-            return result
+        do {
+            return try pendingCall.wait(timeout: timeout)
+        } catch {
+            _ = removePendingCall(for: id)
+            throw error
         }
     }
 
@@ -128,7 +128,36 @@ public final class CodexRPCClient: CodexRPCTransport {
         try send(["method": method, "params": params ?? [:]])
     }
 
+    public func setNotificationHandler(_ handler: CodexRPCNotificationHandler?) {
+        stateLock.lock()
+        notificationHandler = handler
+        stateLock.unlock()
+    }
+
+    public func setDisconnectHandler(_ handler: CodexRPCDisconnectHandler?) {
+        stateLock.lock()
+        disconnectHandler = handler
+        stateLock.unlock()
+    }
+
     public func shutdown() {
+        stateLock.lock()
+        if isShutdown {
+            stateLock.unlock()
+            return
+        }
+        isShutdown = true
+        let pendingCalls = pending.values
+        pending.removeAll()
+        notificationHandler = nil
+        disconnectHandler = nil
+        stateLock.unlock()
+
+        let error = CodexRPCError.malformedResponse("codex app-server stopped")
+        for pendingCall in pendingCalls {
+            pendingCall.complete(.failure(error))
+        }
+
         stdout.fileHandleForReading.readabilityHandler = nil
         stderr.fileHandleForReading.readabilityHandler = nil
         if process.isRunning {
@@ -138,36 +167,116 @@ public final class CodexRPCClient: CodexRPCTransport {
 
     private func send(_ payload: [String: Any]) throws {
         let data = try JSONSerialization.data(withJSONObject: payload)
+        writeLock.lock()
+        defer { writeLock.unlock() }
         stdin.fileHandleForWriting.write(data)
         stdin.fileHandleForWriting.write(Data([0x0A]))
     }
 
-    private func readMessage(timeout: TimeInterval) throws -> [String: Any] {
-        let deadline = Date().addingTimeInterval(timeout)
+    private func startDispatchLoop() {
+        dispatchQueue.async { [weak self] in
+            self?.dispatchMessages()
+        }
+    }
 
+    private func dispatchMessages() {
         while true {
-            let remaining = deadline.timeIntervalSinceNow
-            if remaining <= 0 {
-                throw CodexRPCError.timeout("response")
-            }
-
-            let data: Data
             do {
-                data = try reader.nextLine(timeout: remaining)
+                let data = try reader.nextLine()
+                guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    continue
+                }
+                handleIncomingMessage(object)
             } catch CodexRPCError.malformedResponse(let message) {
                 let stderr = stderrText.snapshot()
+                let error: CodexRPCError
                 if stderr.isEmpty {
-                    throw CodexRPCError.malformedResponse(message)
+                    error = .malformedResponse(message)
+                } else {
+                    error = .malformedResponse("\(message): \(stderr)")
                 }
-                throw CodexRPCError.malformedResponse("\(message): \(stderr)")
+                failPendingCalls(error)
+                emitDisconnect(error)
+                return
+            } catch {
+                failPendingCalls(error)
+                emitDisconnect(error)
+                return
             }
-
-            guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                continue
-            }
-
-            return object
         }
+    }
+
+    private func handleIncomingMessage(_ message: [String: Any]) {
+        if let id = jsonID(message["id"]), message["result"] != nil || message["error"] != nil {
+            guard let pendingCall = removePendingCall(for: id) else {
+                return
+            }
+            pendingCall.complete(result(from: message))
+            return
+        }
+
+        if message["method"] != nil {
+            emitNotification(message)
+        }
+    }
+
+    private func result(from message: [String: Any]) -> Result<[String: Any], Error> {
+        if let error = message["error"] as? [String: Any] {
+            let text = (error["message"] as? String) ?? String(describing: error)
+            return .failure(CodexRPCError.requestFailed(text))
+        }
+
+        guard let result = message["result"] as? [String: Any] else {
+            return .failure(CodexRPCError.malformedResponse("missing result"))
+        }
+
+        return .success(result)
+    }
+
+    private func nextRequestID() -> Int {
+        stateLock.lock()
+        let id = nextID
+        nextID += 1
+        stateLock.unlock()
+        return id
+    }
+
+    private func setPendingCall(_ pendingCall: PendingCall, for id: Int) {
+        stateLock.lock()
+        pending[id] = pendingCall
+        stateLock.unlock()
+    }
+
+    private func removePendingCall(for id: Int) -> PendingCall? {
+        stateLock.lock()
+        let pendingCall = pending.removeValue(forKey: id)
+        stateLock.unlock()
+        return pendingCall
+    }
+
+    private func failPendingCalls(_ error: Error) {
+        stateLock.lock()
+        let pendingCalls = pending.values
+        pending.removeAll()
+        stateLock.unlock()
+
+        for pendingCall in pendingCalls {
+            pendingCall.complete(.failure(error))
+        }
+    }
+
+    private func emitNotification(_ message: [String: Any]) {
+        stateLock.lock()
+        let handler = notificationHandler
+        stateLock.unlock()
+        handler?(message)
+    }
+
+    private func emitDisconnect(_ error: Error?) {
+        stateLock.lock()
+        let handler = disconnectHandler
+        stateLock.unlock()
+        handler?(error)
     }
 
     private func jsonID(_ value: Any?) -> Int? {
@@ -179,6 +288,45 @@ public final class CodexRPCClient: CodexRPCTransport {
         default:
             return nil
         }
+    }
+}
+
+private final class PendingCall {
+    private let method: String
+    private let semaphore = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var result: Result<[String: Any], Error>?
+
+    init(method: String) {
+        self.method = method
+    }
+
+    func complete(_ result: Result<[String: Any], Error>) {
+        lock.lock()
+        guard self.result == nil else {
+            lock.unlock()
+            return
+        }
+        self.result = result
+        lock.unlock()
+        semaphore.signal()
+    }
+
+    func wait(timeout: TimeInterval) throws -> [String: Any] {
+        let status = semaphore.wait(timeout: .now() + timeout)
+        if status == .timedOut {
+            throw CodexRPCError.timeout(method)
+        }
+
+        lock.lock()
+        let result = self.result
+        lock.unlock()
+
+        guard let result else {
+            throw CodexRPCError.malformedResponse("missing response for \(method)")
+        }
+
+        return try result.get()
     }
 }
 
@@ -284,6 +432,24 @@ private final class LineReader {
                 lines.append(line)
                 semaphore.signal()
             }
+        }
+    }
+
+    func nextLine() throws -> Data {
+        while true {
+            lock.lock()
+            if !lines.isEmpty {
+                let line = lines.removeFirst()
+                lock.unlock()
+                return line
+            }
+            if closed {
+                lock.unlock()
+                throw CodexRPCError.malformedResponse("codex app-server closed stdout")
+            }
+            lock.unlock()
+
+            semaphore.wait()
         }
     }
 

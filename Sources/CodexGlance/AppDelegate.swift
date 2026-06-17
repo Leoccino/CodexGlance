@@ -1,19 +1,24 @@
 import AppKit
 import CodexGlanceCore
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private enum Defaults {
         static let showWeeklyInMenuBar = "showWeeklyInMenuBar"
     }
 
+    private static let fallbackRefreshInterval: TimeInterval = 300
+    private static let displayRefreshInterval: TimeInterval = 60
+    private static let refreshDebounceInterval: TimeInterval = 10
+
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    private let fetcher: CodexUsageFetching
+    private let fetcher: CodexUsageMonitoring
     private let userDefaults: UserDefaults
     private var fetchTimer: Timer?
     private var displayTimer: Timer?
     private var latestSnapshot: CodexUsageSnapshot?
     private var latestError: Error?
     private var isRefreshing = false
+    private var lastRefreshStartedAt: Date?
     private var showWeeklyInMenuBar: Bool {
         get {
             if userDefaults.object(forKey: Defaults.showWeeklyInMenuBar) == nil {
@@ -27,7 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    init(fetcher: CodexUsageFetching = CodexUsageFetcher(), userDefaults: UserDefaults = .standard) {
+    init(fetcher: CodexUsageMonitoring = CodexUsageMonitor(), userDefaults: UserDefaults = .standard) {
         self.fetcher = fetcher
         self.userDefaults = userDefaults
         super.init()
@@ -37,14 +42,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         configureStatusButton()
+        configureUsageCallbacks()
         updateStatusTitle()
         rebuildMenu()
-        refresh()
+        startMonitoring()
 
-        fetchTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+        fetchTimer = Timer.scheduledTimer(withTimeInterval: Self.fallbackRefreshInterval, repeats: true) { [weak self] _ in
             self?.refresh()
         }
-        displayTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+        displayTimer = Timer.scheduledTimer(withTimeInterval: Self.displayRefreshInterval, repeats: true) { [weak self] _ in
             self?.updateStatusTitle()
         }
     }
@@ -52,9 +58,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         fetchTimer?.invalidate()
         displayTimer?.invalidate()
+        fetcher.shutdown()
     }
 
     @objc private func refreshMenuItemClicked() {
+        refresh()
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
         refresh()
     }
 
@@ -72,6 +83,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isRefreshing else {
             return
         }
+        let now = Date()
+        if let lastRefreshStartedAt, now.timeIntervalSince(lastRefreshStartedAt) < Self.refreshDebounceInterval {
+            return
+        }
+        lastRefreshStartedAt = now
 
         isRefreshing = true
         updateStatusTitle()
@@ -83,21 +99,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let snapshot = try self.fetcher.fetch()
                 DispatchQueue.main.async {
-                    self.latestSnapshot = snapshot
-                    self.latestError = nil
-                    self.isRefreshing = false
-                    self.updateStatusTitle()
-                    self.rebuildMenu()
+                    self.handleSnapshot(snapshot)
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.latestError = error
-                    self.isRefreshing = false
-                    self.updateStatusTitle()
-                    self.rebuildMenu()
+                    self.handleError(error)
                 }
             }
         }
+    }
+
+    private func configureUsageCallbacks() {
+        fetcher.onSnapshot = { [weak self] snapshot in
+            DispatchQueue.main.async {
+                self?.handleSnapshot(snapshot)
+            }
+        }
+        fetcher.onError = { [weak self] error in
+            DispatchQueue.main.async {
+                self?.handleError(error)
+            }
+        }
+    }
+
+    private func startMonitoring() {
+        lastRefreshStartedAt = Date()
+        isRefreshing = true
+        updateStatusTitle()
+        rebuildMenu()
+        fetcher.start()
+    }
+
+    private func handleSnapshot(_ snapshot: CodexUsageSnapshot) {
+        latestSnapshot = snapshot
+        latestError = nil
+        isRefreshing = false
+        updateStatusTitle()
+        rebuildMenu()
+    }
+
+    private func handleError(_ error: Error) {
+        latestError = error
+        isRefreshing = false
+        updateStatusTitle()
+        rebuildMenu()
     }
 
     private func updateStatusTitle() {
@@ -167,6 +212,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func rebuildMenu() {
         let menu = NSMenu()
+        menu.delegate = self
 
         if isRefreshing {
             addDisabled("Refreshing...", to: menu)

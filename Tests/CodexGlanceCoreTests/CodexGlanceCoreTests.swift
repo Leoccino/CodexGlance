@@ -112,6 +112,47 @@ final class CodexGlanceCoreTests: XCTestCase {
         XCTAssertEqual(snapshot.identity?.plan, "pro")
     }
 
+    func testMapperDecodesRateLimitsUpdatedPayload() throws {
+        let rateLimits: [String: Any] = [
+            "primary": [
+                "used_percent": 21,
+                "limit_window_seconds": 18_000,
+                "reset_at": 1_800_000_000
+            ],
+            "secondary": [
+                "used_percent": 63.5,
+                "limit_window_seconds": 604_800,
+                "reset_at": 1_800_010_000
+            ],
+            "credits": [
+                "hasCredits": true,
+                "unlimited": false,
+                "balance": "128"
+            ],
+            "plan_type": "pro"
+        ]
+        let account: [String: Any] = [
+            "account": [
+                "type": "chatgpt",
+                "email": "user@example.com",
+                "plan_type": "pro"
+            ]
+        ]
+
+        let snapshot = try CodexUsageMapper.snapshot(
+            rateLimits: rateLimits,
+            accountResult: account,
+            now: Date(timeIntervalSince1970: 10)
+        )
+
+        XCTAssertEqual(snapshot.current?.roundedUsedPercent, 21)
+        XCTAssertEqual(snapshot.current?.windowMinutes, 300)
+        XCTAssertEqual(snapshot.weekly?.roundedUsedPercent, 64)
+        XCTAssertEqual(snapshot.weekly?.windowMinutes, 10_080)
+        XCTAssertEqual(snapshot.identity?.email, "user@example.com")
+        XCTAssertEqual(snapshot.identity?.plan, "pro")
+    }
+
     func testMapperRecoversUsageFromRPCErrorBody() throws {
         let message = """
         request failed body={"email":"user@example.com","plan_type":"plus","rate_limit":{"primary_window":{"used_percent":37,"limit_window_seconds":18000,"reset_at":1800000000},"secondary_window":{"used_percent":58,"limit_window_seconds":604800,"reset_at":1800010000}},"credits":{"balance":42}}

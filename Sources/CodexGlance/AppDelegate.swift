@@ -315,8 +315,10 @@ private enum StatusTitleImageRenderer {
         let valueAttributes = attributes(font: metrics.valueFont, color: .labelColor)
 
         let labelWidth = ceil(lines.map { textSize($0.label, attributes: labelAttributes).width }.max() ?? 14)
+        let resetTrackWidth = ceil(labelWidth * (lines.count == 1 ? 1.55 : 1.35))
+        let leadingWidth = max(labelWidth, resetTrackWidth)
         let valueWidth = ceil(lines.map { textSize(percentText(for: $0), attributes: valueAttributes).width }.max() ?? 24)
-        let contentWidth = labelWidth
+        let contentWidth = leadingWidth
             + metrics.labelGap
             + metrics.gaugeSize
             + metrics.gaugeGap
@@ -339,11 +341,11 @@ private enum StatusTitleImageRenderer {
                 drawResetUnderline(
                     for: line,
                     atX: x,
-                    width: labelWidth,
+                    width: resetTrackWidth,
                     in: rowRect,
                     state: state
                 )
-                x += labelWidth + metrics.labelGap
+                x += leadingWidth + metrics.labelGap
 
                 let gaugeRect = NSRect(
                     x: x,
@@ -428,7 +430,7 @@ private enum StatusTitleImageRenderer {
             xRadius: lineHeight / 2,
             yRadius: lineHeight / 2
         )
-        NSColor.labelColor.withAlphaComponent(isCompact ? 0.22 : 0.26).setFill()
+        NSColor.labelColor.withAlphaComponent(isCompact ? 0.24 : 0.30).setFill()
         track.fill()
 
         guard clampedFraction > 0 else {
@@ -608,14 +610,14 @@ private enum StatusTitleImageRenderer {
             }
 
             if fraction <= 0.35 {
-                return NSColor.systemBlue.withAlphaComponent(0.78)
+                return NSColor.systemBlue.withAlphaComponent(0.84)
             }
 
             if fraction <= 0.60 {
-                return NSColor.systemCyan.withAlphaComponent(0.56)
+                return NSColor.systemCyan.withAlphaComponent(0.68)
             }
 
-            return NSColor.systemCyan.withAlphaComponent(0.34)
+            return NSColor.systemCyan.withAlphaComponent(0.52)
         }
     }
 

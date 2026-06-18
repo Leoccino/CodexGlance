@@ -274,11 +274,11 @@ h2 {
 }
 
 .large-reset-line {
-  width: 1.5em;
+  width: 1.7em;
   height: 0.14em;
   display: block;
   margin-top: 0.18em;
-  background: rgba(17, 24, 39, 0.26);
+  background: rgba(17, 24, 39, 0.3);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -287,7 +287,7 @@ h2 {
   display: block;
   width: 58%;
   height: 100%;
-  background: rgba(103, 232, 249, 0.56);
+  background: rgba(103, 232, 249, 0.68);
   border-radius: inherit;
 }
 

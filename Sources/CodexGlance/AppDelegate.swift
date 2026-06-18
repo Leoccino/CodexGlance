@@ -315,10 +315,8 @@ private enum StatusTitleImageRenderer {
         let valueAttributes = attributes(font: metrics.valueFont, color: .labelColor)
 
         let labelWidth = ceil(lines.map { textSize($0.label, attributes: labelAttributes).width }.max() ?? 14)
-        let resetTrackWidth = ceil(labelWidth * (lines.count == 1 ? 1.55 : 1.35))
-        let leadingWidth = max(labelWidth, resetTrackWidth)
         let valueWidth = ceil(lines.map { textSize(percentText(for: $0), attributes: valueAttributes).width }.max() ?? 24)
-        let contentWidth = leadingWidth
+        let contentWidth = labelWidth
             + metrics.labelGap
             + metrics.gaugeSize
             + metrics.gaugeGap
@@ -341,11 +339,11 @@ private enum StatusTitleImageRenderer {
                 drawResetUnderline(
                     for: line,
                     atX: x,
-                    width: resetTrackWidth,
+                    width: labelWidth,
                     in: rowRect,
                     state: state
                 )
-                x += leadingWidth + metrics.labelGap
+                x += labelWidth + metrics.labelGap
 
                 let gaugeRect = NSRect(
                     x: x,
@@ -416,8 +414,8 @@ private enum StatusTitleImageRenderer {
 
         let clampedFraction = min(1, max(0, CGFloat(fraction)))
         let isCompact = rect.height <= 10
-        let lineHeight: CGFloat = isCompact ? 1.2 : 2.4
-        let y = isCompact ? rect.minY + 0.35 : rect.minY + 0.75
+        let lineHeight: CGFloat = isCompact ? 1.35 : 2.8
+        let y = isCompact ? rect.minY + 0.25 : rect.minY + 0.55
         let trackRect = NSRect(
             x: floor(x),
             y: y,

@@ -305,7 +305,7 @@ public enum CodexUsageMapper {
 
     private static func makeIdentity(account: RPCAccountResponse?, fallbackPlan: String?) -> AccountIdentity? {
         if let details = account?.account, details.type.lowercased() == "chatgpt" {
-            return AccountIdentity(email: clean(details.email), plan: clean(details.planType ?? fallbackPlan))
+            return AccountIdentity(email: clean(details.email), plan: clean(fallbackPlan) ?? clean(details.planType))
         }
 
         if let fallbackPlan = clean(fallbackPlan) {

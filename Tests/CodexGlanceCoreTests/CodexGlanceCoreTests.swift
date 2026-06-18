@@ -153,6 +153,35 @@ final class CodexGlanceCoreTests: XCTestCase {
         XCTAssertEqual(snapshot.identity?.plan, "pro")
     }
 
+    func testMapperPrefersRateLimitsPlanForUsageTier() throws {
+        let limits: [String: Any] = [
+            "rateLimits": [
+                "primary": [
+                    "usedPercent": 12,
+                    "windowDurationMins": 300,
+                    "resetsAt": 1_800_000_000
+                ],
+                "planType": "pro"
+            ]
+        ]
+        let account: [String: Any] = [
+            "account": [
+                "type": "chatgpt",
+                "email": "user@example.com",
+                "planType": "plus"
+            ]
+        ]
+
+        let snapshot = try CodexUsageMapper.snapshot(
+            limitsResult: limits,
+            accountResult: account,
+            now: Date(timeIntervalSince1970: 10)
+        )
+
+        XCTAssertEqual(snapshot.identity?.email, "user@example.com")
+        XCTAssertEqual(snapshot.identity?.plan, "pro")
+    }
+
     func testMapperRecoversUsageFromRPCErrorBody() throws {
         let message = """
         request failed body={"email":"user@example.com","plan_type":"plus","rate_limit":{"primary_window":{"used_percent":37,"limit_window_seconds":18000,"reset_at":1800000000},"secondary_window":{"used_percent":58,"limit_window_seconds":604800,"reset_at":1800010000}},"credits":{"balance":42}}

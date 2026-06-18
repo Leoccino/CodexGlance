@@ -200,7 +200,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let image = StatusTitleImageRenderer.render(
             lines,
-            state: state
+            state: state,
+            appearance: button.effectiveAppearance
         )
         statusItem.length = image.size.width + 6
         button.title = ""
@@ -303,7 +304,11 @@ private enum StatusTitleImageRenderer {
         }
     }
 
-    static func render(_ sourceLines: [CodexUsageMenuLine], state: State) -> NSImage {
+    static func render(
+        _ sourceLines: [CodexUsageMenuLine],
+        state: State,
+        appearance: NSAppearance
+    ) -> NSImage {
         let lines = normalizedLines(sourceLines)
         let metrics = Metrics(lineCount: lines.count)
         let labelAttributes = attributes(font: metrics.labelFont, color: .labelColor)
@@ -320,36 +325,39 @@ private enum StatusTitleImageRenderer {
         let image = NSImage(size: NSSize(width: width, height: metrics.height))
 
         image.lockFocus()
-        NSColor.clear.setFill()
-        NSRect(origin: .zero, size: image.size).fill()
+        defer { image.unlockFocus() }
 
-        for (index, line) in lines.enumerated() {
-            let rowRect = rowRect(for: index, lineCount: lines.count, metrics: metrics, width: width)
-            var x = metrics.paddingX
+        appearance.performAsCurrentDrawingAppearance {
+            NSColor.clear.setFill()
+            NSRect(origin: .zero, size: image.size).fill()
 
-            drawText(line.label, atX: x, in: rowRect, attributes: labelAttributes)
-            drawResetUnderline(
-                for: line,
-                atX: x,
-                width: labelWidth,
-                in: rowRect,
-                state: state
-            )
-            x += labelWidth + metrics.labelGap
+            for (index, line) in lines.enumerated() {
+                let rowRect = rowRect(for: index, lineCount: lines.count, metrics: metrics, width: width)
+                var x = metrics.paddingX
 
-            let gaugeRect = NSRect(
-                x: x,
-                y: floor(rowRect.midY - metrics.gaugeSize / 2),
-                width: metrics.gaugeSize,
-                height: metrics.gaugeSize
-            )
-            drawGauge(in: gaugeRect, percent: line.remainingPercent, state: state)
-            x += metrics.gaugeSize + metrics.gaugeGap
+                drawText(line.label, atX: x, in: rowRect, attributes: labelAttributes)
+                drawResetUnderline(
+                    for: line,
+                    atX: x,
+                    width: labelWidth,
+                    in: rowRect,
+                    state: state
+                )
+                x += labelWidth + metrics.labelGap
 
-            drawText(percentText(for: line), atX: x, in: rowRect, attributes: valueAttributes)
+                let gaugeRect = NSRect(
+                    x: x,
+                    y: floor(rowRect.midY - metrics.gaugeSize / 2),
+                    width: metrics.gaugeSize,
+                    height: metrics.gaugeSize
+                )
+                drawGauge(in: gaugeRect, percent: line.remainingPercent, state: state)
+                x += metrics.gaugeSize + metrics.gaugeGap
+
+                drawText(percentText(for: line), atX: x, in: rowRect, attributes: valueAttributes)
+            }
         }
 
-        image.unlockFocus()
         image.isTemplate = false
         return image
     }

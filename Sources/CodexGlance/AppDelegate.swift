@@ -464,16 +464,7 @@ private enum StatusTitleImageRenderer {
         NSColor.labelColor.withAlphaComponent(0.18).setStroke()
         track.stroke()
 
-        if state == .refreshing {
-            drawGaugeArc(
-                center: center,
-                radius: radius,
-                startAngle: startAngle,
-                endAngle: endAngle,
-                lineWidth: lineWidth,
-                color: NSColor.systemBlue.withAlphaComponent(0.55)
-            )
-        } else if state == .error {
+        if state == .error {
             drawGaugeArc(
                 center: center,
                 radius: radius,
@@ -601,11 +592,9 @@ private enum StatusTitleImageRenderer {
 
     private static func resetUnderlineColor(for fraction: CGFloat, state: State) -> NSColor {
         switch state {
-        case .refreshing:
-            return .systemBlue
         case .error:
             return .systemRed
-        case .normal:
+        case .normal, .refreshing:
             if fraction <= 0.15 {
                 return NSColor.systemBlue.withAlphaComponent(0.95)
             }
@@ -623,10 +612,6 @@ private enum StatusTitleImageRenderer {
     }
 
     private static func progressColor(for percent: Int, state: State) -> NSColor {
-        if state == .refreshing {
-            return .systemBlue
-        }
-
         if state == .error {
             return .systemRed
         }

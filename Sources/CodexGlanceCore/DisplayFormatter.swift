@@ -97,7 +97,7 @@ public enum CodexUsageDisplayFormatter {
     }
 
     private static func compactResetDescription(for window: RateWindow?, now: Date) -> String? {
-        guard let resetsAt = window?.resetsAt else {
+        guard let window, let resetsAt = window.resetsAt else {
             return nil
         }
 
@@ -110,8 +110,32 @@ public enum CodexUsageDisplayFormatter {
         let hours = (seconds % 86_400) / 3_600
         let minutes = (seconds % 3_600) / 60
 
+        if (window.windowMinutes ?? 0) > 24 * 60 {
+            return compactLongWindowReset(days: days, hours: hours, minutes: minutes)
+        }
+
         if days > 0 {
-            return "\(days)d\(hours)h"
+            return hours > 0 ? "\(days)d\(hours)h" : "\(days)d"
+        }
+
+        if hours > 0 {
+            return "\(hours)h\(minutes)m"
+        }
+
+        return "\(minutes)m"
+    }
+
+    private static func compactLongWindowReset(days: Int, hours: Int, minutes: Int) -> String {
+        if days > 1 {
+            return "\(days)d"
+        }
+
+        if days > 0 {
+            return hours > 0 ? "\(days)d\(hours)h" : "\(days)d"
+        }
+
+        if hours >= 3 {
+            return "\(hours)h"
         }
 
         if hours > 0 {

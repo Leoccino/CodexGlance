@@ -69,6 +69,33 @@ final class CodexGlanceCoreTests: XCTestCase {
         XCTAssertEqual(line.resetTimeFractionRemaining ?? -1, 0.5, accuracy: 0.001)
     }
 
+    func testWeeklyResetTimeUsesCoarserPrecisionWhenFarAway() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let cases: [(TimeInterval, String)] = [
+            (6 * 86_400 + 3_600 + 15 * 60, "6d"),
+            (86_400 + 7 * 3_600 + 15 * 60, "1d7h"),
+            (12 * 3_600 + 42 * 60, "12h"),
+            (2 * 3_600 + 24 * 60, "2h24m")
+        ]
+
+        for (seconds, resetText) in cases {
+            let snapshot = CodexUsageSnapshot(
+                current: nil,
+                weekly: RateWindow(
+                    usedPercent: 59,
+                    windowMinutes: 10_080,
+                    resetsAt: now.addingTimeInterval(seconds)
+                ),
+                credits: nil,
+                identity: nil,
+                updatedAt: now
+            )
+
+            let line = CodexUsageDisplayFormatter.menuLines(for: snapshot, includeWeekly: true, now: now)[1]
+            XCTAssertEqual(line.resetText, resetText)
+        }
+    }
+
     func testMapperDecodesRPCShape() throws {
         let limits: [String: Any] = [
             "rateLimits": [

@@ -170,8 +170,14 @@ public enum CodexUsageDisplayFormatter {
             return ", reset due now"
         }
 
-        let hours = seconds / 3600
+        let days = seconds / 86_400
+        let hours = (seconds % 86_400) / 3600
         let minutes = (seconds % 3600) / 60
+
+        if days > 0 {
+            return hours > 0 ? ", resets in \(days)d \(hours)h" : ", resets in \(days)d"
+        }
+
         if hours > 0 {
             return ", resets in \(hours)h \(minutes)m"
         }

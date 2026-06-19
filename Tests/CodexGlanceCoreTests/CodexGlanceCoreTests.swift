@@ -96,6 +96,25 @@ final class CodexGlanceCoreTests: XCTestCase {
         }
     }
 
+    func testDisplayUsesDaysForWeeklyResetDescription() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let snapshot = CodexUsageSnapshot(
+            current: nil,
+            weekly: RateWindow(
+                usedPercent: 59,
+                windowMinutes: 10_080,
+                resetsAt: now.addingTimeInterval(86_400 + 7 * 3_600 + 15 * 60)
+            ),
+            credits: nil,
+            identity: nil,
+            updatedAt: now
+        )
+
+        let display = CodexUsageDisplayFormatter.display(for: snapshot, includeWeekly: true, now: now)
+
+        XCTAssertEqual(display.weeklyLine, "wk: 41% remaining, resets in 1d 7h")
+    }
+
     func testMapperDecodesRPCShape() throws {
         let limits: [String: Any] = [
             "rateLimits": [

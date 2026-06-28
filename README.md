@@ -5,7 +5,7 @@
 <h1 align="center">CodexGlance</h1>
 
 <p align="center">
-  <strong>Codex usage, at a glance.</strong>
+  <strong>Codex usage at a glance. No clicks.</strong>
 </p>
 
 <p align="center">

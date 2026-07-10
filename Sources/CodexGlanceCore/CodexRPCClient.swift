@@ -331,23 +331,32 @@ private final class PendingCall {
 }
 
 public enum CodexExecutableLocator {
+    static let bundledExecutableCandidates = [
+        "/Applications/ChatGPT.app/Contents/Resources/codex",
+        "/Applications/Codex.app/Contents/Resources/codex"
+    ]
+
     public static func find(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        find(environment: environment) { path in
+            FileManager.default.isExecutableFile(atPath: path)
+        }
+    }
+
+    static func find(
+        environment: [String: String],
+        isExecutable: (String) -> Bool
+    ) -> String? {
         if let explicit = clean(environment["CODEX_BIN"]) {
             return explicit
         }
 
-        let fileManager = FileManager.default
-        let preferredCandidates = [
-            "/Applications/Codex.app/Contents/Resources/codex"
-        ]
-
-        for candidate in preferredCandidates where fileManager.isExecutableFile(atPath: candidate) {
+        for candidate in bundledExecutableCandidates where isExecutable(candidate) {
             return candidate
         }
 
         for directory in effectivePath(environment: environment).split(separator: ":") {
             let candidate = "\(directory)/codex"
-            if fileManager.isExecutableFile(atPath: candidate) {
+            if isExecutable(candidate) {
                 return candidate
             }
         }

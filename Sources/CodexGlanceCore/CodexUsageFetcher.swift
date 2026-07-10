@@ -51,7 +51,6 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
     private var snapshotHandler: ((CodexUsageSnapshot) -> Void)?
     private var errorHandler: ((Error) -> Void)?
     private var transport: CodexRPCClient?
-    private var latestAccountResult: [String: Any]?
     private var isStarted = false
 
     public var onSnapshot: ((CodexUsageSnapshot) -> Void)? {
@@ -163,7 +162,6 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
         do {
             let limitsResult = try transport.call(method: "account/rateLimits/read", params: nil, timeout: 5)
             let accountResult = try? transport.call(method: "account/read", params: nil, timeout: 3)
-            latestAccountResult = accountResult
             return try CodexUsageMapper.snapshot(limitsResult: limitsResult, accountResult: accountResult)
         } catch CodexRPCError.requestFailed(let message) {
             if let snapshot = CodexUsageMapper.snapshotFromErrorMessage(message) {
@@ -186,42 +184,12 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
 
         switch method {
         case "account/rateLimits/updated":
-            guard let rateLimits = rateLimitsPayload(from: message) else {
-                return
-            }
-
-            do {
-                let snapshot = try CodexUsageMapper.snapshot(
-                    rateLimits: rateLimits,
-                    accountResult: latestAccountResult
-                )
-                emitSnapshot(snapshot)
-            } catch {
-                emitError(error)
-            }
+            refreshAndEmitOnQueue()
         case "account/updated", "account/login/completed":
             refreshAndEmitOnQueue()
         default:
             break
         }
-    }
-
-    private func rateLimitsPayload(from message: [String: Any]) -> [String: Any]? {
-        guard let params = message["params"] as? [String: Any] else {
-            return nil
-        }
-
-        if let rateLimits = params["rateLimits"] as? [String: Any] {
-            return rateLimits
-        }
-        if let rateLimits = params["rate_limits"] as? [String: Any] {
-            return rateLimits
-        }
-        if params["primary"] != nil || params["secondary"] != nil {
-            return params
-        }
-
-        return nil
     }
 
     private func handleDisconnect(from client: CodexRPCClient?, error: Error?) {

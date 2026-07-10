@@ -58,7 +58,7 @@ Because the app is currently unsigned, macOS may require right-clicking the app 
 Requirements:
 
 - macOS 13 or newer.
-- Codex installed and signed in locally.
+- ChatGPT or Codex installed and signed in locally.
 
 ## Privacy
 
@@ -105,7 +105,7 @@ CodexGlance reads usage from the local Codex app server:
 3. Calls `account/rateLimits/read`.
 4. Calls `account/read` for account identity.
 
-Set `CODEX_BIN=/path/to/codex` if your `codex` executable is not on the app's PATH.
+CodexGlance automatically finds the Codex executable bundled with either `ChatGPT.app` or `Codex.app`. Set `CODEX_BIN=/path/to/codex` only for a custom installation.
 
 ## Verify
 

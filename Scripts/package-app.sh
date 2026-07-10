@@ -6,7 +6,7 @@ APP_DIR="${ROOT_DIR}/.build/CodexGlance.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
-VERSION="${CODEXGLANCE_VERSION:-0.1.4}"
+VERSION="${CODEXGLANCE_VERSION:-0.1.5}"
 
 "${ROOT_DIR}/Scripts/build.sh" >/dev/null
 

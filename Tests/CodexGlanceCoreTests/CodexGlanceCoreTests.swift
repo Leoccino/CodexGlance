@@ -2,6 +2,21 @@ import XCTest
 @testable import CodexGlanceCore
 
 final class CodexGlanceCoreTests: XCTestCase {
+    func testExecutableLocatorSupportsChatGPTAndCodexApps() {
+        let chatGPTPath = "/Applications/ChatGPT.app/Contents/Resources/codex"
+        let codexPath = "/Applications/Codex.app/Contents/Resources/codex"
+        let environment = ["PATH": "/usr/bin"]
+
+        XCTAssertEqual(
+            CodexExecutableLocator.find(environment: environment) { $0 == chatGPTPath },
+            chatGPTPath
+        )
+        XCTAssertEqual(
+            CodexExecutableLocator.find(environment: environment) { $0 == codexPath },
+            codexPath
+        )
+    }
+
     func testMenuTitleUsesCurrentAndWeeklyRemainingPercentages() {
         let snapshot = CodexUsageSnapshot(
             current: RateWindow(usedPercent: 68.2, windowMinutes: 300, resetsAt: nil),

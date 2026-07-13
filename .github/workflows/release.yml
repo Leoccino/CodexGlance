@@ -20,11 +20,17 @@ jobs:
         run: |
           CODEXGLANCE_VERSION="${GITHUB_REF_NAME#v}" ./Scripts/package-release.sh
 
-      - name: Create GitHub release
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            .build/release/CodexGlance.app.zip \
-            --title "CodexGlance ${GITHUB_REF_NAME}" \
-            --notes "Download CodexGlance.app.zip, unzip it, and open CodexGlance.app. The app is unsigned, so macOS may require right-click > Open on first launch."
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" \
+              .build/release/CodexGlance.app.zip \
+              --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              .build/release/CodexGlance.app.zip \
+              --title "CodexGlance ${GITHUB_REF_NAME}" \
+              --notes "Download CodexGlance.app.zip, unzip it, and open CodexGlance.app. The app is unsigned, so macOS may require right-click > Open on first launch."
+          fi

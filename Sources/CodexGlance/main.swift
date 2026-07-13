@@ -9,8 +9,15 @@ if CommandLine.arguments.contains("--print") {
         if let accountLine = display.accountLine {
             print(accountLine)
         }
-        print(display.currentLine)
-        print(display.weeklyLine)
+        for usageLine in display.usageLines {
+            print(usageLine)
+        }
+        for additionalLimitLine in display.additionalLimitLines {
+            print(additionalLimitLine)
+        }
+        if let resetCreditsLine = display.resetCreditsLine {
+            print(resetCreditsLine)
+        }
         if let creditsLine = display.creditsLine {
             print(creditsLine)
         }

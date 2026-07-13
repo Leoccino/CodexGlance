@@ -28,18 +28,17 @@ CodexGlance is intentionally narrow:
 
 - **Codex only:** built for people who use Codex and want a dedicated usage glance.
 - **Menu bar only:** no dashboard to keep open, no extra account, no separate service.
-- **Current window first:** the 5-hour Codex usage window is shown by default.
-- **Weekly optional:** weekly usage can be added from the menu when you want it.
+- **Current limit first:** the active Codex limit is always shown with its real duration.
+- **Additional limits when present:** extra windows and model-specific buckets stay one click away.
 
 The menu bar item shows:
 
-- `5h`: current 5-hour Codex usage window.
-- `wk`: optional weekly Codex usage window.
+- Window label: derived from Codex, such as `5h`, `wk`, or another reported duration.
 - Percentage: remaining usage, rounded to whole numbers.
 - Gauge: red for low remaining, orange for caution, green for healthy.
 - Underline: time left before the current window resets.
 
-Click the menu bar item to see account details, reset times, the last update time, and a manual refresh command.
+Click the menu bar item to see account details, all reported limits, reset credits, reset times, the last update time, and a manual refresh command.
 
 ## Visual Design
 

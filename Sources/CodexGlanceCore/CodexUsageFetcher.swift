@@ -230,7 +230,8 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
 public enum CodexUsageMapper {
     public static func snapshot(limitsResult: [String: Any], accountResult: [String: Any]?, now: Date = Date()) throws -> CodexUsageSnapshot {
         let limitsData = try JSONSerialization.data(withJSONObject: limitsResult)
-        let limits = try JSONDecoder().decode(RPCRateLimitsResponse.self, from: limitsData).rateLimits
+        let response = try JSONDecoder().decode(RPCRateLimitsResponse.self, from: limitsData)
+        let limits = response.rateLimits
         let account = try accountResult.flatMap { result -> RPCAccountResponse? in
             let data = try JSONSerialization.data(withJSONObject: result)
             return try JSONDecoder().decode(RPCAccountResponse.self, from: data)
@@ -239,6 +240,8 @@ public enum CodexUsageMapper {
         return CodexUsageSnapshot(
             current: makeWindow(limits.primary),
             weekly: makeWindow(limits.secondary),
+            additionalLimits: makeAdditionalLimits(from: response),
+            resetCreditsAvailable: response.rateLimitResetCredits?.availableCount,
             credits: limits.credits.map { Credits(hasCredits: $0.hasCredits, unlimited: $0.unlimited, balance: $0.balance) },
             identity: makeIdentity(account: account, fallbackPlan: limits.planType),
             updatedAt: now
@@ -259,6 +262,8 @@ public enum CodexUsageMapper {
         return CodexUsageSnapshot(
             current: makeWindow(decoded.rateLimit?.primaryWindow),
             weekly: makeWindow(decoded.rateLimit?.secondaryWindow),
+            additionalLimits: [],
+            resetCreditsAvailable: nil,
             credits: decoded.credits.map { credit in
                 Credits(
                     hasCredits: credit.balance != nil,
@@ -305,6 +310,32 @@ public enum CodexUsageMapper {
             windowMinutes: window.limitWindowSeconds.map { $0 / 60 },
             resetsAt: Date(timeIntervalSince1970: TimeInterval(window.resetAt))
         )
+    }
+
+    private static func makeAdditionalLimits(from response: RPCRateLimitsResponse) -> [RateLimitBucket] {
+        guard let buckets = response.rateLimitsByLimitId else {
+            return []
+        }
+
+        return buckets.compactMap { id, limit -> RateLimitBucket? in
+            if id == response.rateLimits.limitId {
+                return nil
+            }
+
+            let primary = makeWindow(limit.primary)
+            let secondary = makeWindow(limit.secondary)
+            guard primary != nil || secondary != nil else {
+                return nil
+            }
+
+            return RateLimitBucket(
+                id: id,
+                name: clean(limit.limitName),
+                primary: primary,
+                secondary: secondary
+            )
+        }
+        .sorted { ($0.name ?? $0.id).localizedCaseInsensitiveCompare($1.name ?? $1.id) == .orderedAscending }
     }
 
     private static func clean(_ value: String?) -> String? {
@@ -389,10 +420,16 @@ private struct RPCAccountDetails: Decodable {
 
 private struct RPCRateLimitsResponse: Decodable {
     let rateLimits: RPCRateLimitSnapshot
+    let rateLimitsByLimitId: [String: RPCRateLimitSnapshot]?
+    let rateLimitResetCredits: RPCRateLimitResetCreditsSummary?
 
     enum CodingKeys: String, CodingKey {
         case rateLimits
         case rate_limits
+        case rateLimitsByLimitId
+        case rate_limits_by_limit_id
+        case rateLimitResetCredits
+        case rate_limit_reset_credits
     }
 
     init(from decoder: Decoder) throws {
@@ -402,16 +439,26 @@ private struct RPCRateLimitsResponse: Decodable {
         } else {
             self.rateLimits = try container.decode(RPCRateLimitSnapshot.self, forKey: .rate_limits)
         }
+        rateLimitsByLimitId = try container.decodeIfPresent([String: RPCRateLimitSnapshot].self, forKey: .rateLimitsByLimitId)
+            ?? container.decodeIfPresent([String: RPCRateLimitSnapshot].self, forKey: .rate_limits_by_limit_id)
+        rateLimitResetCredits = try container.decodeIfPresent(RPCRateLimitResetCreditsSummary.self, forKey: .rateLimitResetCredits)
+            ?? container.decodeIfPresent(RPCRateLimitResetCreditsSummary.self, forKey: .rate_limit_reset_credits)
     }
 }
 
 private struct RPCRateLimitSnapshot: Decodable {
+    let limitId: String?
+    let limitName: String?
     let primary: RPCRateLimitWindow?
     let secondary: RPCRateLimitWindow?
     let credits: RPCCreditsSnapshot?
     let planType: String?
 
     enum CodingKeys: String, CodingKey {
+        case limitId
+        case limit_id
+        case limitName
+        case limit_name
         case primary
         case secondary
         case credits
@@ -421,11 +468,30 @@ private struct RPCRateLimitSnapshot: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        limitId = try container.decodeIfPresent(String.self, forKey: .limitId)
+            ?? container.decodeIfPresent(String.self, forKey: .limit_id)
+        limitName = try container.decodeIfPresent(String.self, forKey: .limitName)
+            ?? container.decodeIfPresent(String.self, forKey: .limit_name)
         primary = try container.decodeIfPresent(RPCRateLimitWindow.self, forKey: .primary)
         secondary = try container.decodeIfPresent(RPCRateLimitWindow.self, forKey: .secondary)
         credits = try container.decodeIfPresent(RPCCreditsSnapshot.self, forKey: .credits)
         planType = try container.decodeIfPresent(String.self, forKey: .planType)
             ?? container.decodeIfPresent(String.self, forKey: .plan_type)
+    }
+}
+
+private struct RPCRateLimitResetCreditsSummary: Decodable {
+    let availableCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case availableCount
+        case available_count
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        availableCount = try container.decodeIfPresent(Int.self, forKey: .availableCount)
+            ?? container.decode(Int.self, forKey: .available_count)
     }
 }
 

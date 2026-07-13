@@ -226,8 +226,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let accountLine = display.accountLine {
                 addDisabled(accountLine, to: menu)
             }
-            addDisabled(display.currentLine, to: menu)
-            addDisabled(display.weeklyLine, to: menu)
+            for usageLine in display.usageLines {
+                addDisabled(usageLine, to: menu)
+            }
+            for additionalLimitLine in display.additionalLimitLines {
+                addDisabled(additionalLimitLine, to: menu)
+            }
+            if let resetCreditsLine = display.resetCreditsLine {
+                addDisabled(resetCreditsLine, to: menu)
+            }
             if let creditsLine = display.creditsLine {
                 addDisabled(creditsLine, to: menu)
             }
@@ -240,10 +247,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(NSMenuItem.separator())
-        let weeklyItem = NSMenuItem(title: "Show Weekly in Menu Bar", action: #selector(toggleWeeklyClicked), keyEquivalent: "")
-        weeklyItem.target = self
-        weeklyItem.state = showWeeklyInMenuBar ? .on : .off
-        menu.addItem(weeklyItem)
+        if latestSnapshot?.weekly != nil {
+            let weeklyItem = NSMenuItem(title: "Show Additional Limit in Menu Bar", action: #selector(toggleWeeklyClicked), keyEquivalent: "")
+            weeklyItem.target = self
+            weeklyItem.state = showWeeklyInMenuBar ? .on : .off
+            menu.addItem(weeklyItem)
+        }
 
         let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshMenuItemClicked), keyEquivalent: "r")
         refreshItem.target = self
@@ -365,7 +374,7 @@ private enum StatusTitleImageRenderer {
     private static func normalizedLines(_ lines: [CodexUsageMenuLine]) -> [CodexUsageMenuLine] {
         let normalized = Array(lines.prefix(2))
         if normalized.isEmpty {
-            return [CodexUsageMenuLine(label: "5h", remainingPercent: nil, resetText: nil)]
+            return [CodexUsageMenuLine(label: "use", remainingPercent: nil, resetText: nil)]
         }
 
         return normalized

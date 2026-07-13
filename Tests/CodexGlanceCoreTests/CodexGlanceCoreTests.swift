@@ -53,6 +53,30 @@ final class CodexGlanceCoreTests: XCTestCase {
         XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: false), "5h 68%")
     }
 
+    func testPrimaryWeeklyWindowUsesWeeklyLabelAndOmitsMissingSecondary() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let snapshot = CodexUsageSnapshot(
+            current: RateWindow(
+                usedPercent: 2,
+                windowMinutes: 10_080,
+                resetsAt: now.addingTimeInterval(6 * 86_400 + 12 * 3_600)
+            ),
+            weekly: nil,
+            credits: nil,
+            identity: nil,
+            updatedAt: now
+        )
+
+        XCTAssertEqual(
+            CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: true, now: now),
+            "wk 98% 6d"
+        )
+        XCTAssertEqual(
+            CodexUsageDisplayFormatter.display(for: snapshot, now: now).usageLines,
+            ["wk: 98% remaining, resets in 6d 12h"]
+        )
+    }
+
     func testMenuTitleIncludesCompactResetTimes() {
         let now = Date(timeIntervalSince1970: 1_000)
         let snapshot = CodexUsageSnapshot(
@@ -127,7 +151,7 @@ final class CodexGlanceCoreTests: XCTestCase {
 
         let display = CodexUsageDisplayFormatter.display(for: snapshot, includeWeekly: true, now: now)
 
-        XCTAssertEqual(display.weeklyLine, "wk: 41% remaining, resets in 1d 7h")
+        XCTAssertEqual(display.usageLines, ["wk: 41% remaining, resets in 1d 7h"])
     }
 
     func testMapperDecodesRPCShape() throws {
@@ -212,6 +236,60 @@ final class CodexGlanceCoreTests: XCTestCase {
         XCTAssertEqual(snapshot.weekly?.windowMinutes, 10_080)
         XCTAssertEqual(snapshot.identity?.email, "user@example.com")
         XCTAssertEqual(snapshot.identity?.plan, "pro")
+    }
+
+    func testMapperDecodesMultiBucketLimitsAndResetCredits() throws {
+        let limits: [String: Any] = [
+            "rateLimits": [
+                "limitId": "codex",
+                "primary": [
+                    "usedPercent": 2,
+                    "windowDurationMins": 10_080,
+                    "resetsAt": 1_800_000_000
+                ],
+                "planType": "prolite"
+            ],
+            "rateLimitsByLimitId": [
+                "codex": [
+                    "limitId": "codex",
+                    "primary": [
+                        "usedPercent": 2,
+                        "windowDurationMins": 10_080,
+                        "resetsAt": 1_800_000_000
+                    ]
+                ],
+                "codex_bengalfox": [
+                    "limitId": "codex_bengalfox",
+                    "limitName": "GPT-5.3-Codex-Spark",
+                    "primary": [
+                        "usedPercent": 0,
+                        "windowDurationMins": 10_080,
+                        "resetsAt": 1_800_010_000
+                    ]
+                ]
+            ],
+            "rateLimitResetCredits": [
+                "availableCount": 3
+            ]
+        ]
+
+        let snapshot = try CodexUsageMapper.snapshot(
+            limitsResult: limits,
+            accountResult: nil,
+            now: Date(timeIntervalSince1970: 10)
+        )
+
+        XCTAssertEqual(snapshot.current?.windowMinutes, 10_080)
+        XCTAssertNil(snapshot.weekly)
+        XCTAssertEqual(snapshot.additionalLimits.count, 1)
+        XCTAssertEqual(snapshot.additionalLimits.first?.name, "GPT-5.3-Codex-Spark")
+        XCTAssertEqual(snapshot.additionalLimits.first?.primary?.remainingPercent, 100)
+        XCTAssertEqual(snapshot.resetCreditsAvailable, 3)
+
+        let display = CodexUsageDisplayFormatter.display(for: snapshot, now: Date(timeIntervalSince1970: 10))
+        XCTAssertEqual(display.resetCreditsLine, "Reset credits: 3")
+        XCTAssertEqual(display.additionalLimitLines.count, 1)
+        XCTAssertTrue(display.additionalLimitLines[0].hasPrefix("GPT-5.3-Codex-Spark · wk: 100% remaining"))
     }
 
     func testMapperPrefersRateLimitsPlanForUsageTier() throws {

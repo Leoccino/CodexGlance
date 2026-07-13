@@ -17,22 +17,25 @@ public enum CodexUsageDisplayFormatter {
         now: Date = Date()
     ) -> [CodexUsageMenuLine] {
         guard let snapshot else {
-            return placeholderLines(includeWeekly: includeWeekly)
+            return placeholderLines()
         }
 
-        var lines = [
-            CodexUsageMenuLine(
-                label: "5h",
-                remainingPercent: remainingPercentage(snapshot.current),
-                resetText: compactResetDescription(for: snapshot.current, now: now),
-                resetTimeFractionRemaining: resetTimeFractionRemaining(for: snapshot.current, now: now)
-            )
-        ]
-
-        if includeWeekly {
+        var lines: [CodexUsageMenuLine] = []
+        if let current = snapshot.current {
             lines.append(
                 CodexUsageMenuLine(
-                    label: "wk",
+                    label: windowLabel(for: current, fallback: "use"),
+                    remainingPercent: remainingPercentage(snapshot.current),
+                    resetText: compactResetDescription(for: snapshot.current, now: now),
+                    resetTimeFractionRemaining: resetTimeFractionRemaining(for: snapshot.current, now: now)
+                )
+            )
+        }
+
+        if includeWeekly, let weekly = snapshot.weekly {
+            lines.append(
+                CodexUsageMenuLine(
+                    label: windowLabel(for: weekly, fallback: "more"),
                     remainingPercent: remainingPercentage(snapshot.weekly),
                     resetText: compactResetDescription(for: snapshot.weekly, now: now),
                     resetTimeFractionRemaining: resetTimeFractionRemaining(for: snapshot.weekly, now: now)
@@ -40,34 +43,47 @@ public enum CodexUsageDisplayFormatter {
             )
         }
 
-        return lines
+        return lines.isEmpty ? placeholderLines() : lines
     }
 
     public static func display(for snapshot: CodexUsageSnapshot, includeWeekly: Bool = true, now: Date = Date()) -> CodexUsageDisplay {
         CodexUsageDisplay(
             title: menuTitle(for: snapshot, includeWeekly: includeWeekly, now: now),
-            currentLine: "5h: \(windowDescription(snapshot.current, now: now))",
-            weeklyLine: "wk: \(windowDescription(snapshot.weekly, now: now))",
+            usageLines: usageDetailLines(for: snapshot, now: now),
+            additionalLimitLines: additionalLimitLines(for: snapshot.additionalLimits, now: now),
+            resetCreditsLine: resetCreditsDescription(snapshot.resetCreditsAvailable),
             creditsLine: creditsDescription(snapshot.credits),
             accountLine: accountDescription(snapshot.identity),
             updatedLine: "Updated: \(timeFormatter.string(from: snapshot.updatedAt))"
         )
     }
 
-    public static func errorTitle(includeWeekly: Bool = true) -> String {
-        includeWeekly ? "5h --%\nwk --%" : "5h --%"
+    public static func errorTitle(includeWeekly _: Bool = true) -> String {
+        "use --%"
     }
 
-    private static func placeholderLines(includeWeekly: Bool) -> [CodexUsageMenuLine] {
-        var lines = [
-            CodexUsageMenuLine(label: "5h", remainingPercent: nil, resetText: nil)
-        ]
-
-        if includeWeekly {
-            lines.append(CodexUsageMenuLine(label: "wk", remainingPercent: nil, resetText: nil))
+    public static func windowLabel(for window: RateWindow, fallback: String = "use") -> String {
+        guard let minutes = window.windowMinutes, minutes > 0 else {
+            return fallback
         }
 
-        return lines
+        if minutes == 10_080 {
+            return "wk"
+        }
+        if minutes % 10_080 == 0 {
+            return "\(minutes / 10_080)wk"
+        }
+        if minutes % 1_440 == 0 {
+            return "\(minutes / 1_440)d"
+        }
+        if minutes % 60 == 0 {
+            return "\(minutes / 60)h"
+        }
+        return "\(minutes)m"
+    }
+
+    private static func placeholderLines() -> [CodexUsageMenuLine] {
+        [CodexUsageMenuLine(label: "use", remainingPercent: nil, resetText: nil)]
     }
 
     private static func titleLine(_ line: CodexUsageMenuLine) -> String {
@@ -94,6 +110,31 @@ public enum CodexUsageDisplayFormatter {
 
         let reset = resetDescription(for: window, now: now)
         return "\(Int(window.remainingPercent.rounded()))% remaining\(reset)"
+    }
+
+    private static func usageDetailLines(for snapshot: CodexUsageSnapshot, now: Date) -> [String] {
+        var lines: [String] = []
+        if let current = snapshot.current {
+            lines.append("\(windowLabel(for: current)): \(windowDescription(current, now: now))")
+        }
+        if let weekly = snapshot.weekly {
+            lines.append("\(windowLabel(for: weekly, fallback: "more")): \(windowDescription(weekly, now: now))")
+        }
+        return lines
+    }
+
+    private static func additionalLimitLines(for buckets: [RateLimitBucket], now: Date) -> [String] {
+        buckets.flatMap { bucket in
+            let name = bucket.name ?? bucket.id
+            var lines: [String] = []
+            if let primary = bucket.primary {
+                lines.append("\(name) · \(windowLabel(for: primary)): \(windowDescription(primary, now: now))")
+            }
+            if let secondary = bucket.secondary {
+                lines.append("\(name) · \(windowLabel(for: secondary, fallback: "more")): \(windowDescription(secondary, now: now))")
+            }
+            return lines
+        }
     }
 
     private static func compactResetDescription(for window: RateWindow?, now: Date) -> String? {
@@ -195,6 +236,14 @@ public enum CodexUsageDisplayFormatter {
         }
 
         return "Credits: \(credits.balance ?? "0")"
+    }
+
+    private static func resetCreditsDescription(_ available: Int?) -> String? {
+        guard let available, available > 0 else {
+            return nil
+        }
+
+        return "Reset credits: \(available)"
     }
 
     private static func accountDescription(_ identity: AccountIdentity?) -> String? {

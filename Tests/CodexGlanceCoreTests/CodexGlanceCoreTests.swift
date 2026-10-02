@@ -2,6 +2,47 @@ import XCTest
 @testable import CodexGlanceCore
 
 final class CodexGlanceCoreTests: XCTestCase {
+    func testExecutableLocatorSupportsEveryKnownBundleLayout() {
+        let environment = ["HOME": "/Users/test", "PATH": "/usr/bin"]
+        for app in ["ChatGPT.app", "Codex.app"] {
+            for directory in ["/Applications", "/Users/test/Applications"] {
+                for executable in ["codex-cli/bin/codex", "codex-cli/CodexCLI.app/Contents/MacOS/codex", "codex"] {
+                    let path = "\(directory)/\(app)/Contents/Resources/\(executable)"
+                    XCTAssertEqual(CodexExecutableLocator.find(environment: environment) { $0 == path }, path)
+                }
+            }
+        }
+    }
+
+    func testExecutableLocatorPrefersNewBundleOverOldBundleAndPath() {
+        let newPath = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex"
+        let available = Set([
+            newPath,
+            "/Applications/ChatGPT.app/Contents/Resources/codex",
+            "/Applications/Codex.app/Contents/Resources/codex",
+            "/custom/bin/codex"
+        ])
+        XCTAssertEqual(
+            CodexExecutableLocator.find(environment: ["PATH": "/custom/bin"], isExecutable: available.contains),
+            newPath
+        )
+    }
+
+    func testExecutableLocatorHonorsExplicitOverride() {
+        XCTAssertEqual(
+            CodexExecutableLocator.find(environment: ["CODEX_BIN": " /custom/codex "]) { _ in true },
+            "/custom/codex"
+        )
+    }
+
+    func testExecutableLocatorFallsBackToPathOrReportsMissing() {
+        XCTAssertEqual(
+            CodexExecutableLocator.find(environment: ["PATH": "/custom/bin"]) { $0 == "/custom/bin/codex" },
+            "/custom/bin/codex"
+        )
+        XCTAssertNil(CodexExecutableLocator.find(environment: ["PATH": "/usr/bin"]) { _ in false })
+    }
+
     func testExecutableLocatorSupportsChatGPTAndCodexApps() {
         let chatGPTPath = "/Applications/ChatGPT.app/Contents/Resources/codex"
         let codexPath = "/Applications/Codex.app/Contents/Resources/codex"
@@ -130,8 +171,9 @@ final class CodexGlanceCoreTests: XCTestCase {
                 updatedAt: now
             )
 
-            let line = CodexUsageDisplayFormatter.menuLines(for: snapshot, includeWeekly: true, now: now)[1]
-            XCTAssertEqual(line.resetText, resetText)
+            let lines = CodexUsageDisplayFormatter.menuLines(for: snapshot, includeWeekly: true, now: now)
+            XCTAssertEqual(lines.count, 1)
+            XCTAssertEqual(lines.first?.resetText, resetText)
         }
     }
 

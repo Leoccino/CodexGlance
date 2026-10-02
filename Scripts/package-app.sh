@@ -6,7 +6,7 @@ APP_DIR="${ROOT_DIR}/.build/CodexGlance.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
-VERSION="${CODEXGLANCE_VERSION:-0.1.6}"
+VERSION="${CODEXGLANCE_VERSION:-0.1.7}"
 
 "${ROOT_DIR}/Scripts/build.sh" >/dev/null
 
@@ -35,7 +35,7 @@ cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key>
   <string>${VERSION}</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>${VERSION}</string>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
   <key>LSUIElement</key>

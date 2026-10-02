@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var latestSnapshot: CodexUsageSnapshot?
     private var latestError: Error?
     private var isRefreshing = false
+    private var isCheckingForUpdates = false
+    private let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     private var lastRefreshStartedAt: Date?
     private var showWeeklyInMenuBar: Bool {
         get {
@@ -77,6 +79,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         showWeeklyInMenuBar.toggle()
         updateStatusTitle()
         rebuildMenu()
+    }
+
+    @objc private func openWebsiteClicked() {
+        NSWorkspace.shared.open(ReleaseUpdateChecker.websiteURL)
+    }
+
+    @objc private func openDownloadClicked() {
+        NSWorkspace.shared.open(ReleaseUpdateChecker.releasesURL)
+    }
+
+    @objc private func checkForUpdatesClicked() {
+        guard !isCheckingForUpdates else { return }
+        isCheckingForUpdates = true
+        rebuildMenu()
+        ReleaseUpdateChecker.check(installedVersion: installedVersion) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isCheckingForUpdates = false
+                self.rebuildMenu()
+                self.showUpdateResult(result)
+            }
+        }
+    }
+
+    private func showUpdateResult(_ result: Result<ReleaseUpdateStatus, Error>) {
+        let alert = NSAlert()
+        switch result {
+        case .success(.updateAvailable(let version)):
+            alert.messageText = "CodexGlance \(version) Is Available"
+            alert.informativeText = "Installed version: \(installedVersion ?? "unknown"). Download the new release and replace CodexGlance in Applications."
+        case .success(.noNewerRelease(let version)):
+            alert.messageText = "No Newer Release"
+            alert.informativeText = "Installed version: \(installedVersion ?? "unknown"). Latest published release: \(version)."
+        case .success(.unknownInstalledVersion(let version)):
+            alert.messageText = "Latest Release: \(version)"
+            alert.informativeText = "This build has no comparable release version. Download a packaged release to enable version comparisons."
+        case .failure(let error):
+            alert.alertStyle = .warning
+            alert.messageText = "Unable to Check for Updates"
+            alert.informativeText = "\(error.localizedDescription) You can check the download page manually."
+        }
+        alert.addButton(withTitle: "Open Download Page")
+        alert.addButton(withTitle: "Close")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            openDownloadClicked()
+        }
     }
 
     private func refresh() {
@@ -259,6 +308,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshItem.isEnabled = !isRefreshing
         menu.addItem(refreshItem)
 
+        menu.addItem(NSMenuItem.separator())
+        addDisabled("CodexGlance \(installedVersion ?? "(Development Build)")", to: menu)
+
+        let updateItem = NSMenuItem(
+            title: isCheckingForUpdates ? "Checking for Updates…" : "Check for Updates…",
+            action: isCheckingForUpdates ? nil : #selector(checkForUpdatesClicked),
+            keyEquivalent: ""
+        )
+        updateItem.target = self
+        menu.addItem(updateItem)
+
+        let websiteItem = NSMenuItem(title: "Website", action: #selector(openWebsiteClicked), keyEquivalent: "")
+        websiteItem.target = self
+        menu.addItem(websiteItem)
+
+        let downloadItem = NSMenuItem(title: "Download Latest Version", action: #selector(openDownloadClicked), keyEquivalent: "")
+        downloadItem.target = self
+        menu.addItem(downloadItem)
+
+        menu.addItem(NSMenuItem.separator())
         let quitItem = NSMenuItem(title: "Quit CodexGlance", action: #selector(quitClicked), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)

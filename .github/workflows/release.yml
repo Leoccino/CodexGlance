@@ -16,6 +16,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Test compatibility and update checks
+        run: swift test
+
       - name: Package app
         run: |
           CODEXGLANCE_VERSION="${GITHUB_REF_NAME#v}" ./Scripts/package-release.sh

@@ -40,6 +40,8 @@ The menu bar item shows:
 
 Click the menu bar item to see account details, all reported limits, reset credits, reset times, the last update time, and a manual refresh command.
 
+The menu also includes **Check for Updates…**, **Download Latest Version**, and **Website**. Update checks compare the installed version with the latest public GitHub release and open its download page when requested. Installing an update still requires replacing the app; this build does not install updates automatically.
+
 ## Visual Design
 
 The public site and README use the same visual model as the macOS app: a 210 degree gauge start, 240 degree sweep, and a needle mapped to the remaining percentage.
@@ -62,6 +64,8 @@ Requirements:
 ## Privacy
 
 CodexGlance reads usage from the local Codex app server. It does not ship tokens, cookies, prompts, or usage data to any third-party service.
+
+Only a manual update check contacts GitHub's public releases API. It sends no account or usage data.
 
 ## Build From Source
 
@@ -104,7 +108,9 @@ CodexGlance reads usage from the local Codex app server:
 3. Calls `account/rateLimits/read`.
 4. Calls `account/read` for account identity.
 
-CodexGlance automatically finds the Codex executable bundled with either `ChatGPT.app` or `Codex.app`. Set `CODEX_BIN=/path/to/codex` only for a custom installation.
+CodexGlance automatically finds the Codex executable bundled with either `ChatGPT.app` or `Codex.app`, in `/Applications` or `~/Applications`. It supports both the original `Contents/Resources/codex` layout and the newer `Contents/Resources/codex-cli/` launcher/nested CLI layout, then falls back to `codex` on PATH. Set `CODEX_BIN=/path/to/codex` to override discovery for a custom installation.
+
+Compatibility is based on the available executable layout and reported quota windows, rather than a fixed ChatGPT/Codex version number. Unknown future protocol changes may still require an update.
 
 ## Verify
 

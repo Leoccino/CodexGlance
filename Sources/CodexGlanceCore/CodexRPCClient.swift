@@ -331,10 +331,20 @@ private final class PendingCall {
 }
 
 public enum CodexExecutableLocator {
-    static let bundledExecutableCandidates = [
-        "/Applications/ChatGPT.app/Contents/Resources/codex",
-        "/Applications/Codex.app/Contents/Resources/codex"
-    ]
+    // New app bundles use a launcher beside a nested, signed CLI app. Keep
+    // the original flat layout for older ChatGPT and standalone Codex builds.
+    static func bundledExecutableCandidates(environment: [String: String]) -> [String] {
+        let home = environment["HOME"] ?? NSHomeDirectory()
+        return ["ChatGPT.app", "Codex.app"].flatMap { app in
+            ["/Applications", "\(home)/Applications"].flatMap { directory in
+                [
+                    "\(directory)/\(app)/Contents/Resources/codex-cli/bin/codex",
+                    "\(directory)/\(app)/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+                    "\(directory)/\(app)/Contents/Resources/codex"
+                ]
+            }
+        }
+    }
 
     public static func find(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         find(environment: environment) { path in
@@ -350,7 +360,7 @@ public enum CodexExecutableLocator {
             return explicit
         }
 
-        for candidate in bundledExecutableCandidates where isExecutable(candidate) {
+        for candidate in bundledExecutableCandidates(environment: environment) where isExecutable(candidate) {
             return candidate
         }
 

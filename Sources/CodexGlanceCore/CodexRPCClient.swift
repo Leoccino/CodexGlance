@@ -6,6 +6,7 @@ public enum CodexRPCError: LocalizedError, Equatable {
     case requestFailed(String)
     case timeout(String)
     case malformedResponse(String)
+    case noUsageData
 
     public var errorDescription: String? {
         switch self {
@@ -19,6 +20,8 @@ public enum CodexRPCError: LocalizedError, Equatable {
             return "Timed out waiting for \(method)."
         case let .malformedResponse(message):
             return "Codex returned invalid data: \(message)"
+        case .noUsageData:
+            return "Codex reported no usage limits. Make sure ChatGPT or Codex is signed in."
         }
     }
 }
@@ -32,7 +35,14 @@ public protocol CodexRPCTransport {
 public typealias CodexRPCNotificationHandler = ([String: Any]) -> Void
 public typealias CodexRPCDisconnectHandler = (Error?) -> Void
 
-public final class CodexRPCClient: CodexRPCTransport {
+// A long-lived app-server connection that also pushes notifications.
+public protocol CodexRPCSession: AnyObject, CodexRPCTransport {
+    func initialize(timeout: TimeInterval) throws
+    func setNotificationHandler(_ handler: CodexRPCNotificationHandler?)
+    func setDisconnectHandler(_ handler: CodexRPCDisconnectHandler?)
+}
+
+public final class CodexRPCClient: CodexRPCSession {
     private let process: Process
     private let stdin: Pipe
     private let stdout: Pipe

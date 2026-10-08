@@ -59,7 +59,7 @@ final class CodexGlanceCoreTests: XCTestCase {
     }
 
     func testMenuTitleUsesCurrentAndWeeklyRemainingPercentages() {
-        let snapshot = CodexUsageSnapshot(
+        let snapshot = UsageSnapshot(
             current: RateWindow(usedPercent: 68.2, windowMinutes: 300, resetsAt: nil),
             weekly: RateWindow(usedPercent: 40.6, windowMinutes: 10_080, resetsAt: nil),
             credits: nil,
@@ -67,11 +67,11 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h 32%\nwk 59%")
+        XCTAssertEqual(UsageDisplayFormatter.menuTitle(for: snapshot), "5h 32%\nwk 59%")
     }
 
     func testMenuTitleMatchesCompactExamples() {
-        let snapshot = CodexUsageSnapshot(
+        let snapshot = UsageSnapshot(
             current: RateWindow(usedPercent: 32, windowMinutes: 300, resetsAt: nil),
             weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: nil),
             credits: nil,
@@ -79,11 +79,11 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot), "5h 68%\nwk 41%")
+        XCTAssertEqual(UsageDisplayFormatter.menuTitle(for: snapshot), "5h 68%\nwk 41%")
     }
 
-    func testMenuTitleCanHideWeeklyUsage() {
-        let snapshot = CodexUsageSnapshot(
+    func testMenuTitleShowsEitherWindowOrBoth() {
+        let snapshot = UsageSnapshot(
             current: RateWindow(usedPercent: 32, windowMinutes: 300, resetsAt: nil),
             weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: nil),
             credits: nil,
@@ -91,12 +91,34 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 0)
         )
 
-        XCTAssertEqual(CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: false), "5h 68%")
+        XCTAssertEqual(UsageDisplayFormatter.menuTitle(for: snapshot, windows: .current), "5h 68%")
+        XCTAssertEqual(UsageDisplayFormatter.menuTitle(for: snapshot, windows: .weekly), "wk 41%")
+        XCTAssertEqual(UsageDisplayFormatter.menuTitle(for: snapshot, windows: .both), "5h 68%\nwk 41%")
+    }
+
+    func testMenuTitleFallsBackToTheWindowAProductHas() {
+        let onlyCurrent = UsageSnapshot(
+            current: RateWindow(usedPercent: 32, windowMinutes: 300, resetsAt: nil),
+            weekly: nil,
+            credits: nil,
+            identity: nil,
+            updatedAt: Date(timeIntervalSince1970: 0)
+        )
+        let onlyWeekly = UsageSnapshot(
+            current: nil,
+            weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: nil),
+            credits: nil,
+            identity: nil,
+            updatedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertEqual(UsageDisplayFormatter.menuTitle(for: onlyCurrent, windows: .weekly), "5h 68%")
+        XCTAssertEqual(UsageDisplayFormatter.menuTitle(for: onlyWeekly, windows: .current), "wk 41%")
     }
 
     func testPrimaryWeeklyWindowUsesWeeklyLabelAndOmitsMissingSecondary() {
         let now = Date(timeIntervalSince1970: 1_000)
-        let snapshot = CodexUsageSnapshot(
+        let snapshot = UsageSnapshot(
             current: RateWindow(
                 usedPercent: 2,
                 windowMinutes: 10_080,
@@ -109,18 +131,18 @@ final class CodexGlanceCoreTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: true, now: now),
+            UsageDisplayFormatter.menuTitle(for: snapshot, windows: .both, now: now),
             "wk 98% 6d"
         )
         XCTAssertEqual(
-            CodexUsageDisplayFormatter.display(for: snapshot, now: now).usageLines,
+            UsageDisplayFormatter.display(for: snapshot, now: now).usageLines,
             ["wk: 98% remaining, resets in 6d 12h"]
         )
     }
 
     func testMenuTitleIncludesCompactResetTimes() {
         let now = Date(timeIntervalSince1970: 1_000)
-        let snapshot = CodexUsageSnapshot(
+        let snapshot = UsageSnapshot(
             current: RateWindow(usedPercent: 12, windowMinutes: 300, resetsAt: now.addingTimeInterval(8_640)),
             weekly: RateWindow(usedPercent: 59, windowMinutes: 10_080, resetsAt: now.addingTimeInterval(111_600)),
             credits: nil,
@@ -129,14 +151,14 @@ final class CodexGlanceCoreTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            CodexUsageDisplayFormatter.menuTitle(for: snapshot, includeWeekly: true, now: now),
+            UsageDisplayFormatter.menuTitle(for: snapshot, windows: .both, now: now),
             "5h 88% 2h24m\nwk 41% 1d7h"
         )
     }
 
     func testMenuLinesIncludeResetTimeFractionRemaining() {
         let now = Date(timeIntervalSince1970: 1_000)
-        let snapshot = CodexUsageSnapshot(
+        let snapshot = UsageSnapshot(
             current: RateWindow(usedPercent: 12, windowMinutes: 300, resetsAt: now.addingTimeInterval(9_000)),
             weekly: nil,
             credits: nil,
@@ -144,7 +166,7 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: now
         )
 
-        let line = CodexUsageDisplayFormatter.menuLines(for: snapshot, includeWeekly: false, now: now)[0]
+        let line = UsageDisplayFormatter.menuLines(for: snapshot, windows: .current, now: now)[0]
 
         XCTAssertEqual(line.resetTimeFractionRemaining ?? -1, 0.5, accuracy: 0.001)
     }
@@ -159,7 +181,7 @@ final class CodexGlanceCoreTests: XCTestCase {
         ]
 
         for (seconds, resetText) in cases {
-            let snapshot = CodexUsageSnapshot(
+            let snapshot = UsageSnapshot(
                 current: nil,
                 weekly: RateWindow(
                     usedPercent: 59,
@@ -171,7 +193,7 @@ final class CodexGlanceCoreTests: XCTestCase {
                 updatedAt: now
             )
 
-            let lines = CodexUsageDisplayFormatter.menuLines(for: snapshot, includeWeekly: true, now: now)
+            let lines = UsageDisplayFormatter.menuLines(for: snapshot, windows: .both, now: now)
             XCTAssertEqual(lines.count, 1)
             XCTAssertEqual(lines.first?.resetText, resetText)
         }
@@ -179,7 +201,7 @@ final class CodexGlanceCoreTests: XCTestCase {
 
     func testDisplayUsesDaysForWeeklyResetDescription() {
         let now = Date(timeIntervalSince1970: 1_000)
-        let snapshot = CodexUsageSnapshot(
+        let snapshot = UsageSnapshot(
             current: nil,
             weekly: RateWindow(
                 usedPercent: 59,
@@ -191,7 +213,7 @@ final class CodexGlanceCoreTests: XCTestCase {
             updatedAt: now
         )
 
-        let display = CodexUsageDisplayFormatter.display(for: snapshot, includeWeekly: true, now: now)
+        let display = UsageDisplayFormatter.display(for: snapshot, windows: .both, now: now)
 
         XCTAssertEqual(display.usageLines, ["wk: 41% remaining, resets in 1d 7h"])
     }
@@ -328,7 +350,7 @@ final class CodexGlanceCoreTests: XCTestCase {
         XCTAssertEqual(snapshot.additionalLimits.first?.primary?.remainingPercent, 100)
         XCTAssertEqual(snapshot.resetCreditsAvailable, 3)
 
-        let display = CodexUsageDisplayFormatter.display(for: snapshot, now: Date(timeIntervalSince1970: 10))
+        let display = UsageDisplayFormatter.display(for: snapshot, now: Date(timeIntervalSince1970: 10))
         XCTAssertEqual(display.resetCreditsLine, "Reset credits: 3")
         XCTAssertEqual(display.additionalLimitLines.count, 1)
         XCTAssertTrue(display.additionalLimitLines[0].hasPrefix("GPT-5.3-Codex-Spark · wk: 100% remaining"))

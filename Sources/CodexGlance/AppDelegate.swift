@@ -3,39 +3,67 @@ import CodexGlanceCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private enum Defaults {
-        static let showWeeklyInMenuBar = "showWeeklyInMenuBar"
+        static let menuBarWindows = "menuBarWindows"
+        // Replaced by `menuBarWindows`; read until a new choice is saved.
+        static let legacyShowWeeklyInMenuBar = "showWeeklyInMenuBar"
+        static let menuBarProvider = "menuBarProvider"
+    }
+
+    private final class ProviderState {
+        let provider: UsageProvider
+        let monitor: UsageMonitoring
+        var latestSnapshot: UsageSnapshot?
+        var latestError: Error?
+        var isRefreshing = false
+        var lastRefreshStartedAt: Date?
+
+        init(provider: UsageProvider, monitor: UsageMonitoring) {
+            self.provider = provider
+            self.monitor = monitor
+        }
     }
 
     private static let fallbackRefreshInterval: TimeInterval = 300
     private static let displayRefreshInterval: TimeInterval = 60
-    private static let refreshDebounceInterval: TimeInterval = 10
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    private let fetcher: CodexUsageMonitoring
+    private let providers: [ProviderState]
     private let userDefaults: UserDefaults
     private var fetchTimer: Timer?
     private var displayTimer: Timer?
-    private var latestSnapshot: CodexUsageSnapshot?
-    private var latestError: Error?
-    private var isRefreshing = false
     private var isCheckingForUpdates = false
     private let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-    private var lastRefreshStartedAt: Date?
-    private var showWeeklyInMenuBar: Bool {
+    private var menuBarWindows: MenuBarWindows {
         get {
-            if userDefaults.object(forKey: Defaults.showWeeklyInMenuBar) == nil {
-                return false
+            if let rawValue = userDefaults.string(forKey: Defaults.menuBarWindows),
+               let windows = MenuBarWindows(rawValue: rawValue) {
+                return windows
             }
 
-            return userDefaults.bool(forKey: Defaults.showWeeklyInMenuBar)
+            return userDefaults.bool(forKey: Defaults.legacyShowWeeklyInMenuBar) ? .both : .current
         }
         set {
-            userDefaults.set(newValue, forKey: Defaults.showWeeklyInMenuBar)
+            userDefaults.set(newValue.rawValue, forKey: Defaults.menuBarWindows)
         }
     }
 
-    init(fetcher: CodexUsageMonitoring = CodexUsageMonitor(), userDefaults: UserDefaults = .standard) {
-        self.fetcher = fetcher
+    private var menuBarProvider: ProviderState {
+        // Codex unless the user switched products in "Show in Menu Bar".
+        let rawValue = userDefaults.string(forKey: Defaults.menuBarProvider) ?? UsageProvider.codex.rawValue
+        return providers.first { $0.provider.rawValue == rawValue } ?? providers[0]
+    }
+
+    init(
+        monitors: [UsageProvider: UsageMonitoring] = [
+            .codex: CodexUsageMonitor(),
+            .claude: ClaudeUsageFetcher()
+        ],
+        userDefaults: UserDefaults = .standard
+    ) {
+        providers = UsageProvider.allCases.compactMap { provider in
+            monitors[provider].map { ProviderState(provider: provider, monitor: $0) }
+        }
+        precondition(!providers.isEmpty, "At least one usage provider is required")
         self.userDefaults = userDefaults
         super.init()
     }
@@ -60,7 +88,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         fetchTimer?.invalidate()
         displayTimer?.invalidate()
-        fetcher.shutdown()
+        for state in providers {
+            state.monitor.shutdown()
+        }
     }
 
     @objc private func refreshMenuItemClicked() {
@@ -75,8 +105,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.terminate(nil)
     }
 
-    @objc private func toggleWeeklyClicked() {
-        showWeeklyInMenuBar.toggle()
+    @objc private func menuBarWindowsClicked(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String, let windows = MenuBarWindows(rawValue: rawValue) else {
+            return
+        }
+
+        menuBarWindows = windows
+        updateStatusTitle()
+        rebuildMenu()
+    }
+
+    @objc private func menuBarProviderClicked(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String else {
+            return
+        }
+
+        userDefaults.set(rawValue, forKey: Defaults.menuBarProvider)
         updateStatusTitle()
         rebuildMenu()
     }
@@ -129,105 +173,135 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func refresh() {
-        guard !isRefreshing else {
+        for state in providers {
+            refresh(state)
+        }
+    }
+
+    private func refresh(_ state: ProviderState) {
+        guard !state.isRefreshing else {
             return
         }
         let now = Date()
-        if let lastRefreshStartedAt, now.timeIntervalSince(lastRefreshStartedAt) < Self.refreshDebounceInterval {
+        if let lastRefreshStartedAt = state.lastRefreshStartedAt,
+           now.timeIntervalSince(lastRefreshStartedAt) < Self.refreshDebounceInterval(for: state.provider) {
             return
         }
-        lastRefreshStartedAt = now
+        state.lastRefreshStartedAt = now
 
-        isRefreshing = true
+        state.isRefreshing = true
         updateStatusTitle()
         rebuildMenu()
 
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self else { return }
-
+        let monitor = state.monitor
+        DispatchQueue.global(qos: .utility).async { [weak self, weak state] in
             do {
-                let snapshot = try self.fetcher.fetch()
+                let snapshot = try monitor.fetch()
                 DispatchQueue.main.async {
-                    self.handleSnapshot(snapshot)
+                    guard let state else { return }
+                    self?.handleSnapshot(snapshot, for: state)
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.handleError(error)
+                    guard let state else { return }
+                    self?.handleError(error, for: state)
                 }
             }
         }
     }
 
-    private func configureUsageCallbacks() {
-        fetcher.onSnapshot = { [weak self] snapshot in
-            DispatchQueue.main.async {
-                self?.handleSnapshot(snapshot)
-            }
+    private static func refreshDebounceInterval(for provider: UsageProvider) -> TimeInterval {
+        switch provider {
+        case .codex:
+            return 10
+        case .claude:
+            // Claude usage is polled over HTTP and the endpoint throttles bursts.
+            return 60
         }
-        fetcher.onError = { [weak self] error in
-            DispatchQueue.main.async {
-                self?.handleError(error)
+    }
+
+    private func configureUsageCallbacks() {
+        for state in providers {
+            state.monitor.onSnapshot = { [weak self, weak state] snapshot in
+                DispatchQueue.main.async {
+                    guard let state else { return }
+                    self?.handleSnapshot(snapshot, for: state)
+                }
+            }
+            state.monitor.onError = { [weak self, weak state] error in
+                DispatchQueue.main.async {
+                    guard let state else { return }
+                    self?.handleError(error, for: state)
+                }
             }
         }
     }
 
     private func startMonitoring() {
-        lastRefreshStartedAt = Date()
-        isRefreshing = true
+        for state in providers {
+            state.lastRefreshStartedAt = Date()
+            state.isRefreshing = true
+        }
         updateStatusTitle()
         rebuildMenu()
-        fetcher.start()
+        for state in providers {
+            state.monitor.start()
+        }
     }
 
-    private func handleSnapshot(_ snapshot: CodexUsageSnapshot) {
-        latestSnapshot = snapshot
-        latestError = nil
-        isRefreshing = false
+    private func handleSnapshot(_ snapshot: UsageSnapshot, for state: ProviderState) {
+        state.latestSnapshot = snapshot
+        state.latestError = nil
+        state.isRefreshing = false
         updateStatusTitle()
         rebuildMenu()
     }
 
-    private func handleError(_ error: Error) {
-        latestError = error
-        isRefreshing = false
+    private func handleError(_ error: Error, for state: ProviderState) {
+        state.latestError = error
+        state.isRefreshing = false
         updateStatusTitle()
         rebuildMenu()
     }
 
     private func updateStatusTitle() {
         let now = Date()
-        let lines: [CodexUsageMenuLine]
+        let state = menuBarProvider
+        let name = state.provider.displayName
+        let lines: [UsageMenuLine]
         let tooltip: String
 
-        if let latestSnapshot {
-            lines = CodexUsageDisplayFormatter.menuLines(
+        if let latestSnapshot = state.latestSnapshot {
+            lines = UsageDisplayFormatter.menuLines(
                 for: latestSnapshot,
-                includeWeekly: showWeeklyInMenuBar,
+                windows: menuBarWindows,
                 now: now
             )
-            tooltip = CodexUsageDisplayFormatter.menuTitle(
+            tooltip = "\(name) · " + UsageDisplayFormatter.menuTitle(
                 for: latestSnapshot,
-                includeWeekly: showWeeklyInMenuBar,
+                windows: menuBarWindows,
                 now: now
             )
-        } else if let latestError {
-            lines = CodexUsageDisplayFormatter.menuLines(for: nil, includeWeekly: showWeeklyInMenuBar)
-            tooltip = "\(CodexUsageDisplayFormatter.errorTitle(includeWeekly: showWeeklyInMenuBar)) / \(latestError.localizedDescription)"
+        } else if let latestError = state.latestError {
+            lines = UsageDisplayFormatter.menuLines(for: nil, windows: menuBarWindows)
+            tooltip = "\(name) · \(UsageDisplayFormatter.errorTitle()) / \(latestError.localizedDescription)"
         } else {
-            lines = CodexUsageDisplayFormatter.menuLines(for: nil, includeWeekly: showWeeklyInMenuBar)
-            tooltip = isRefreshing ? "Refreshing Codex usage" : "Codex usage not loaded"
+            lines = UsageDisplayFormatter.menuLines(for: nil, windows: menuBarWindows)
+            tooltip = state.isRefreshing ? "Refreshing \(name) usage" : "\(name) usage not loaded"
         }
 
-        let state: StatusTitleImageRenderer.State
-        if isRefreshing {
-            state = .refreshing
-        } else if latestError != nil {
-            state = .error
+        let renderState: StatusTitleImageRenderer.State
+        if state.isRefreshing {
+            renderState = .refreshing
+        } else if state.latestError != nil {
+            renderState = .error
         } else {
-            state = .normal
+            renderState = .normal
         }
 
-        setStatusLines(lines, state: state, tooltip: tooltip)
+        // The mark only matters when there is a second product to tell apart.
+        let hasBothProducts = providers.filter { $0.latestSnapshot != nil }.count > 1
+        setStatusLines(lines, state: renderState, mark: hasBothProducts ? state.provider : nil, tooltip: tooltip)
     }
 
     private func configureStatusButton() {
@@ -239,8 +313,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func setStatusLines(
-        _ lines: [CodexUsageMenuLine],
+        _ lines: [UsageMenuLine],
         state: StatusTitleImageRenderer.State,
+        mark: UsageProvider?,
         tooltip: String
     ) {
         guard let button = statusItem.button else {
@@ -250,6 +325,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let image = StatusTitleImageRenderer.render(
             lines,
             state: state,
+            mark: mark,
             appearance: button.effectiveAppearance
         )
         statusItem.length = image.size.width + 6
@@ -264,48 +340,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
 
-        if isRefreshing {
-            addDisabled("Refreshing...", to: menu)
-        } else if let snapshot = latestSnapshot {
-            let display = CodexUsageDisplayFormatter.display(for: snapshot, includeWeekly: showWeeklyInMenuBar)
-            for titleLine in display.title.split(separator: "\n") {
-                addDisabled(String(titleLine), to: menu)
+        let selected = menuBarProvider
+        let orderedProviders = [selected] + providers.filter { $0 !== selected }
+        for (index, state) in orderedProviders.enumerated() {
+            if index > 0 {
+                menu.addItem(NSMenuItem.separator())
             }
-            menu.addItem(NSMenuItem.separator())
-            if let accountLine = display.accountLine {
-                addDisabled(accountLine, to: menu)
-            }
-            for usageLine in display.usageLines {
-                addDisabled(usageLine, to: menu)
-            }
-            for additionalLimitLine in display.additionalLimitLines {
-                addDisabled(additionalLimitLine, to: menu)
-            }
-            if let resetCreditsLine = display.resetCreditsLine {
-                addDisabled(resetCreditsLine, to: menu)
-            }
-            if let creditsLine = display.creditsLine {
-                addDisabled(creditsLine, to: menu)
-            }
-            addDisabled(display.updatedLine, to: menu)
-        } else if let latestError {
-            addDisabled("Codex usage unavailable", to: menu)
-            addDisabled(latestError.localizedDescription, to: menu)
-        } else {
-            addDisabled("Codex usage not loaded", to: menu)
+            addSection(for: state, to: menu)
         }
 
         menu.addItem(NSMenuItem.separator())
-        if latestSnapshot?.weekly != nil {
-            let weeklyItem = NSMenuItem(title: "Show Additional Limit in Menu Bar", action: #selector(toggleWeeklyClicked), keyEquivalent: "")
-            weeklyItem.target = self
-            weeklyItem.state = showWeeklyInMenuBar ? .on : .off
-            menu.addItem(weeklyItem)
+        let showMenu = NSMenu()
+        if providers.count > 1 {
+            for state in providers {
+                addChoice(
+                    state.provider.displayName,
+                    value: state.provider.rawValue,
+                    isSelected: state === selected,
+                    action: #selector(menuBarProviderClicked(_:)),
+                    to: showMenu
+                )
+            }
+        }
+        if let current = selected.latestSnapshot?.current, let weekly = selected.latestSnapshot?.weekly {
+            if !showMenu.items.isEmpty {
+                showMenu.addItem(NSMenuItem.separator())
+            }
+            let currentLabel = UsageDisplayFormatter.windowLabel(for: current)
+            let weeklyLabel = UsageDisplayFormatter.windowLabel(for: weekly, fallback: "more")
+            let choices: [(String, MenuBarWindows)] = [
+                (currentLabel, .current),
+                (weeklyLabel, .weekly),
+                ("\(currentLabel) + \(weeklyLabel)", .both)
+            ]
+            for (title, windows) in choices {
+                addChoice(
+                    title,
+                    value: windows.rawValue,
+                    isSelected: windows == menuBarWindows,
+                    action: #selector(menuBarWindowsClicked(_:)),
+                    to: showMenu
+                )
+            }
+        }
+        if !showMenu.items.isEmpty {
+            let showItem = NSMenuItem(title: "Show in Menu Bar", action: nil, keyEquivalent: "")
+            showItem.submenu = showMenu
+            menu.addItem(showItem)
         }
 
         let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshMenuItemClicked), keyEquivalent: "r")
         refreshItem.target = self
-        refreshItem.isEnabled = !isRefreshing
+        refreshItem.isEnabled = providers.contains { !$0.isRefreshing }
         menu.addItem(refreshItem)
 
         menu.addItem(NSMenuItem.separator())
@@ -335,6 +421,62 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
     }
 
+    private func addSection(for state: ProviderState, to menu: NSMenu) {
+        let name = state.provider.displayName
+        addHeader(name, to: menu)
+
+        if let snapshot = state.latestSnapshot {
+            let display = UsageDisplayFormatter.display(for: snapshot)
+            if let accountLine = display.accountLine {
+                addDisabled(accountLine, to: menu)
+            }
+            for usageLine in display.usageLines {
+                addDisabled(usageLine, to: menu)
+            }
+            for additionalLimitLine in display.additionalLimitLines {
+                addDisabled(additionalLimitLine, to: menu)
+            }
+            if let resetCreditsLine = display.resetCreditsLine {
+                addDisabled(resetCreditsLine, to: menu)
+            }
+            if let creditsLine = display.creditsLine {
+                addDisabled(creditsLine, to: menu)
+            }
+            if let latestError = state.latestError {
+                addDisabled("Refresh failed: \(latestError.localizedDescription)", to: menu)
+            }
+            addDisabled(state.isRefreshing ? "Refreshing..." : display.updatedLine, to: menu)
+        } else if state.isRefreshing {
+            addDisabled("Refreshing...", to: menu)
+        } else if let latestError = state.latestError {
+            addDisabled("\(name) usage unavailable", to: menu)
+            addDisabled(latestError.localizedDescription, to: menu)
+        } else {
+            addDisabled("\(name) usage not loaded", to: menu)
+        }
+    }
+
+    private func addChoice(_ title: String, value: String, isSelected: Bool, action: Selector, to menu: NSMenu) {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        item.representedObject = value
+        item.state = isSelected ? .on : .off
+        menu.addItem(item)
+    }
+
+    private func addHeader(_ title: String, to menu: NSMenu) {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize),
+                .foregroundColor: NSColor.labelColor
+            ]
+        )
+        item.isEnabled = false
+        menu.addItem(item)
+    }
+
     private func addDisabled(_ title: String, to menu: NSMenu) {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
@@ -356,6 +498,8 @@ private enum StatusTitleImageRenderer {
         let labelGap: CGFloat
         let gaugeGap: CGFloat
         let gaugeSize: CGFloat
+        let markSize: CGFloat
+        let markGap: CGFloat
         let labelFont: NSFont
         let valueFont: NSFont
 
@@ -367,6 +511,8 @@ private enum StatusTitleImageRenderer {
                 labelGap = 5
                 gaugeGap = 5
                 gaugeSize = 15
+                markSize = 11
+                markGap = 4
                 labelFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .semibold)
             } else {
@@ -376,6 +522,8 @@ private enum StatusTitleImageRenderer {
                 labelGap = 3
                 gaugeGap = 4
                 gaugeSize = 9
+                markSize = 12
+                markGap = 4
                 labelFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
                 valueFont = NSFont.monospacedSystemFont(ofSize: 9.3, weight: .semibold)
             }
@@ -383,8 +531,9 @@ private enum StatusTitleImageRenderer {
     }
 
     static func render(
-        _ sourceLines: [CodexUsageMenuLine],
+        _ sourceLines: [UsageMenuLine],
         state: State,
+        mark: UsageProvider?,
         appearance: NSAppearance
     ) -> NSImage {
         let lines = normalizedLines(sourceLines)
@@ -394,7 +543,9 @@ private enum StatusTitleImageRenderer {
 
         let labelWidth = ceil(lines.map { textSize($0.label, attributes: labelAttributes).width }.max() ?? 14)
         let valueWidth = ceil(lines.map { textSize(percentText(for: $0), attributes: valueAttributes).width }.max() ?? 24)
-        let contentWidth = labelWidth
+        let markWidth = mark == nil ? 0 : metrics.markSize + metrics.markGap
+        let contentWidth = markWidth
+            + labelWidth
             + metrics.labelGap
             + metrics.gaugeSize
             + metrics.gaugeGap
@@ -409,9 +560,24 @@ private enum StatusTitleImageRenderer {
             NSColor.clear.setFill()
             NSRect(origin: .zero, size: image.size).fill()
 
+            if let mark {
+                let markRect = NSRect(
+                    x: metrics.paddingX,
+                    y: floor((metrics.height - metrics.markSize) / 2),
+                    width: metrics.markSize,
+                    height: metrics.markSize
+                )
+                switch mark {
+                case .codex:
+                    drawCodexMark(in: markRect)
+                case .claude:
+                    drawClaudeMark(in: markRect)
+                }
+            }
+
             for (index, line) in lines.enumerated() {
                 let rowRect = rowRect(for: index, lineCount: lines.count, metrics: metrics, width: width)
-                var x = metrics.paddingX
+                var x = metrics.paddingX + markWidth
 
                 drawText(line.label, atX: x, in: rowRect, attributes: labelAttributes)
                 drawResetUnderline(
@@ -440,10 +606,10 @@ private enum StatusTitleImageRenderer {
         return image
     }
 
-    private static func normalizedLines(_ lines: [CodexUsageMenuLine]) -> [CodexUsageMenuLine] {
+    private static func normalizedLines(_ lines: [UsageMenuLine]) -> [UsageMenuLine] {
         let normalized = Array(lines.prefix(2))
         if normalized.isEmpty {
-            return [CodexUsageMenuLine(label: "use", remainingPercent: nil, resetText: nil)]
+            return [UsageMenuLine(label: "use", remainingPercent: nil, resetText: nil)]
         }
 
         return normalized
@@ -480,7 +646,7 @@ private enum StatusTitleImageRenderer {
     }
 
     private static func drawResetUnderline(
-        for line: CodexUsageMenuLine,
+        for line: UsageMenuLine,
         atX x: CGFloat,
         width: CGFloat,
         in rect: NSRect,
@@ -654,7 +820,38 @@ private enum StatusTitleImageRenderer {
         arc.stroke()
     }
 
-    private static func percentText(for line: CodexUsageMenuLine) -> String {
+    // A terminal prompt, `>_`, in the label color so it follows light and dark mode.
+    private static func drawCodexMark(in rect: NSRect) {
+        let prompt = NSBezierPath()
+        prompt.lineCapStyle = .round
+        prompt.lineJoinStyle = .round
+        prompt.lineWidth = max(1.3, rect.width * 0.14)
+        prompt.move(to: NSPoint(x: rect.minX + rect.width * 0.10, y: rect.minY + rect.height * 0.80))
+        prompt.line(to: NSPoint(x: rect.minX + rect.width * 0.44, y: rect.midY))
+        prompt.line(to: NSPoint(x: rect.minX + rect.width * 0.10, y: rect.minY + rect.height * 0.20))
+        prompt.move(to: NSPoint(x: rect.minX + rect.width * 0.56, y: rect.minY + rect.height * 0.20))
+        prompt.line(to: NSPoint(x: rect.minX + rect.width * 0.94, y: rect.minY + rect.height * 0.20))
+        NSColor.labelColor.setStroke()
+        prompt.stroke()
+    }
+
+    private static func drawClaudeMark(in rect: NSRect) {
+        let center = NSPoint(x: rect.midX, y: rect.midY)
+        let spark = NSBezierPath()
+        spark.lineCapStyle = .round
+        spark.lineWidth = max(1.2, rect.width * 0.15)
+        for index in 0..<8 {
+            let angle = CGFloat(index) * 45 + 22.5
+            spark.move(to: point(from: center, radius: rect.width * 0.12, angleDegrees: angle))
+            spark.line(to: point(from: center, radius: rect.width * 0.46, angleDegrees: angle))
+        }
+        claudeMarkColor.setStroke()
+        spark.stroke()
+    }
+
+    private static let claudeMarkColor = NSColor(srgbRed: 0.85, green: 0.47, blue: 0.34, alpha: 1)
+
+    private static func percentText(for line: UsageMenuLine) -> String {
         line.remainingPercent.map { "\($0)%" } ?? "--%"
     }
 

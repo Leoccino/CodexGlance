@@ -35,6 +35,8 @@ swiftc \
   "${ROOT_DIR}/Sources/CodexGlanceCore/DisplayFormatter.swift" \
   "${ROOT_DIR}/Sources/CodexGlanceCore/CodexRPCClient.swift" \
   "${ROOT_DIR}/Sources/CodexGlanceCore/CodexUsageFetcher.swift" \
+  "${ROOT_DIR}/Sources/CodexGlanceCore/ClaudeCredentials.swift" \
+  "${ROOT_DIR}/Sources/CodexGlanceCore/ClaudeUsageFetcher.swift" \
   "${ROOT_DIR}/Sources/CodexGlanceCore/ReleaseUpdateChecker.swift" \
   -emit-module-path "${BUILD_DIR}/CodexGlanceCore.swiftmodule" \
   -o "${BUILD_DIR}/libCodexGlanceCore.a"

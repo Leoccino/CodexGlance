@@ -1,18 +1,18 @@
 import Foundation
 
-public protocol CodexUsageFetching {
-    func fetch() throws -> CodexUsageSnapshot
+public protocol UsageFetching {
+    func fetch() throws -> UsageSnapshot
 }
 
-public protocol CodexUsageMonitoring: AnyObject, CodexUsageFetching {
-    var onSnapshot: ((CodexUsageSnapshot) -> Void)? { get set }
+public protocol UsageMonitoring: AnyObject, UsageFetching {
+    var onSnapshot: ((UsageSnapshot) -> Void)? { get set }
     var onError: ((Error) -> Void)? { get set }
 
     func start()
     func shutdown()
 }
 
-public final class CodexUsageFetcher: CodexUsageFetching {
+public final class CodexUsageFetcher: UsageFetching {
     private let makeTransport: () throws -> CodexRPCTransport
 
     public convenience init() {
@@ -27,7 +27,7 @@ public final class CodexUsageFetcher: CodexUsageFetching {
         self.makeTransport = makeTransport
     }
 
-    public func fetch() throws -> CodexUsageSnapshot {
+    public func fetch() throws -> UsageSnapshot {
         let transport = try makeTransport()
         defer { transport.shutdown() }
 
@@ -44,16 +44,23 @@ public final class CodexUsageFetcher: CodexUsageFetching {
     }
 }
 
-public final class CodexUsageMonitor: CodexUsageMonitoring {
-    private let makeClient: () throws -> CodexRPCClient
+public final class CodexUsageMonitor: UsageMonitoring {
+    // An app-server keeps the sign-in it started with. After ChatGPT signs in
+    // again, an old one keeps answering with an invalidated token, so it is
+    // replaced after this long, or as soon as it reports no usage at all.
+    static let maximumTransportAge: TimeInterval = 30 * 60
+
+    private let makeClient: () throws -> CodexRPCSession
+    private let now: () -> Date
     private let queue = DispatchQueue(label: "CodexGlance.CodexUsageMonitor", qos: .utility)
     private let callbackLock = NSLock()
-    private var snapshotHandler: ((CodexUsageSnapshot) -> Void)?
+    private var snapshotHandler: ((UsageSnapshot) -> Void)?
     private var errorHandler: ((Error) -> Void)?
-    private var transport: CodexRPCClient?
+    private var transport: CodexRPCSession?
+    private var transportStartedAt: Date?
     private var isStarted = false
 
-    public var onSnapshot: ((CodexUsageSnapshot) -> Void)? {
+    public var onSnapshot: ((UsageSnapshot) -> Void)? {
         get {
             callbackLock.lock()
             defer { callbackLock.unlock() }
@@ -85,8 +92,9 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
         }
     }
 
-    public init(makeClient: @escaping () throws -> CodexRPCClient) {
+    public init(makeClient: @escaping () throws -> CodexRPCSession, now: @escaping () -> Date = Date.init) {
         self.makeClient = makeClient
+        self.now = now
     }
 
     public func start() {
@@ -105,8 +113,8 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
         }
     }
 
-    public func fetch() throws -> CodexUsageSnapshot {
-        var result: Result<CodexUsageSnapshot, Error>!
+    public func fetch() throws -> UsageSnapshot {
+        var result: Result<UsageSnapshot, Error>!
         queue.sync {
             result = Result {
                 try fetchOnQueue()
@@ -124,7 +132,28 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
         }
     }
 
-    private func fetchOnQueue() throws -> CodexUsageSnapshot {
+    private func fetchOnQueue() throws -> UsageSnapshot {
+        if let transportStartedAt, now().timeIntervalSince(transportStartedAt) >= Self.maximumTransportAge {
+            resetTransportOnQueue()
+        }
+
+        for _ in 0..<2 {
+            let reusedTransport = transport != nil
+            let snapshot = try readSnapshotOnQueue()
+            if snapshot.hasUsageWindows {
+                return snapshot
+            }
+
+            resetTransportOnQueue()
+            if !reusedTransport {
+                break
+            }
+        }
+
+        throw CodexRPCError.noUsageData
+    }
+
+    private func readSnapshotOnQueue() throws -> UsageSnapshot {
         let transport = try transportOnQueue()
         do {
             return try readSnapshot(using: transport)
@@ -134,7 +163,7 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
         }
     }
 
-    private func transportOnQueue() throws -> CodexRPCClient {
+    private func transportOnQueue() throws -> CodexRPCSession {
         if let transport {
             return transport
         }
@@ -148,17 +177,18 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
         }
 
         do {
-            try client.initialize()
+            try client.initialize(timeout: 8)
         } catch {
             client.shutdown()
             throw error
         }
 
         transport = client
+        transportStartedAt = now()
         return client
     }
 
-    private func readSnapshot(using transport: CodexRPCTransport) throws -> CodexUsageSnapshot {
+    private func readSnapshot(using transport: CodexRPCTransport) throws -> UsageSnapshot {
         do {
             let limitsResult = try transport.call(method: "account/rateLimits/read", params: nil, timeout: 5)
             let accountResult = try? transport.call(method: "account/read", params: nil, timeout: 3)
@@ -192,7 +222,7 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
         }
     }
 
-    private func handleDisconnect(from client: CodexRPCClient?, error: Error?) {
+    private func handleDisconnect(from client: CodexRPCSession?, error: Error?) {
         queue.async { [weak self, weak client] in
             guard let self else { return }
             if let client, self.transport !== client {
@@ -200,6 +230,7 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
             }
 
             self.transport = nil
+            self.transportStartedAt = nil
             if let error {
                 self.emitError(error)
             }
@@ -209,10 +240,11 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
     private func resetTransportOnQueue() {
         let oldTransport = transport
         transport = nil
+        transportStartedAt = nil
         oldTransport?.shutdown()
     }
 
-    private func emitSnapshot(_ snapshot: CodexUsageSnapshot) {
+    private func emitSnapshot(_ snapshot: UsageSnapshot) {
         callbackLock.lock()
         let handler = snapshotHandler
         callbackLock.unlock()
@@ -228,7 +260,7 @@ public final class CodexUsageMonitor: CodexUsageMonitoring {
 }
 
 public enum CodexUsageMapper {
-    public static func snapshot(limitsResult: [String: Any], accountResult: [String: Any]?, now: Date = Date()) throws -> CodexUsageSnapshot {
+    public static func snapshot(limitsResult: [String: Any], accountResult: [String: Any]?, now: Date = Date()) throws -> UsageSnapshot {
         let limitsData = try JSONSerialization.data(withJSONObject: limitsResult)
         let response = try JSONDecoder().decode(RPCRateLimitsResponse.self, from: limitsData)
         let limits = response.rateLimits
@@ -237,7 +269,7 @@ public enum CodexUsageMapper {
             return try JSONDecoder().decode(RPCAccountResponse.self, from: data)
         }
 
-        return CodexUsageSnapshot(
+        return UsageSnapshot(
             current: makeWindow(limits.primary),
             weekly: makeWindow(limits.secondary),
             additionalLimits: makeAdditionalLimits(from: response),
@@ -248,18 +280,18 @@ public enum CodexUsageMapper {
         )
     }
 
-    public static func snapshot(rateLimits: [String: Any], accountResult: [String: Any]?, now: Date = Date()) throws -> CodexUsageSnapshot {
+    public static func snapshot(rateLimits: [String: Any], accountResult: [String: Any]?, now: Date = Date()) throws -> UsageSnapshot {
         try snapshot(limitsResult: ["rateLimits": rateLimits], accountResult: accountResult, now: now)
     }
 
-    public static func snapshotFromErrorMessage(_ message: String, now: Date = Date()) -> CodexUsageSnapshot? {
+    public static func snapshotFromErrorMessage(_ message: String, now: Date = Date()) -> UsageSnapshot? {
         guard let body = extractJSONObject(after: "body=", in: message),
               let data = body.data(using: .utf8),
               let decoded = try? JSONDecoder().decode(RPCRateLimitsErrorBody.self, from: data) else {
             return nil
         }
 
-        return CodexUsageSnapshot(
+        return UsageSnapshot(
             current: makeWindow(decoded.rateLimit?.primaryWindow),
             weekly: makeWindow(decoded.rateLimit?.secondaryWindow),
             additionalLimits: [],

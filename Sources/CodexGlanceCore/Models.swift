@@ -1,5 +1,26 @@
 import Foundation
 
+public enum UsageProvider: String, CaseIterable {
+    case codex
+    case claude
+
+    public var displayName: String {
+        switch self {
+        case .codex:
+            return "Codex"
+        case .claude:
+            return "Claude"
+        }
+    }
+}
+
+// Which of a product's two windows the menu bar shows.
+public enum MenuBarWindows: String, CaseIterable {
+    case current
+    case weekly
+    case both
+}
+
 public struct RateWindow: Equatable {
     public let usedPercent: Double
     public let windowMinutes: Int?
@@ -60,7 +81,7 @@ public struct RateLimitBucket: Equatable {
     }
 }
 
-public struct CodexUsageSnapshot: Equatable {
+public struct UsageSnapshot: Equatable {
     public let current: RateWindow?
     public let weekly: RateWindow?
     public let additionalLimits: [RateLimitBucket]
@@ -86,9 +107,13 @@ public struct CodexUsageSnapshot: Equatable {
         self.identity = identity
         self.updatedAt = updatedAt
     }
+
+    public var hasUsageWindows: Bool {
+        current != nil || weekly != nil || !additionalLimits.isEmpty
+    }
 }
 
-public struct CodexUsageDisplay: Equatable {
+public struct UsageDisplay: Equatable {
     public let title: String
     public let usageLines: [String]
     public let additionalLimitLines: [String]
@@ -116,7 +141,7 @@ public struct CodexUsageDisplay: Equatable {
     }
 }
 
-public struct CodexUsageMenuLine: Equatable {
+public struct UsageMenuLine: Equatable {
     public let label: String
     public let remainingPercent: Int?
     public let resetText: String?
